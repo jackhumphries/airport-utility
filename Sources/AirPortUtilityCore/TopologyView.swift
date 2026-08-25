@@ -80,9 +80,10 @@ struct TopologyView: View {
           VStack(spacing: 0) {
             TopologyRootConnector(
               rootCount: model.topologyTrees.count,
-              rootSpacing: rootTreeSpacing)
-              .frame(height: 42)
-              .accessibilityHidden(true)
+              rootSpacing: rootTreeSpacing
+            )
+            .frame(height: 42)
+            .accessibilityHidden(true)
             HStack(alignment: .top, spacing: rootTreeSpacing) {
               ForEach(model.topologyTrees) { tree in
                 TopologyTreeView(tree: tree, isCompact: hasTopologyHierarchy) { device in
@@ -103,11 +104,6 @@ struct TopologyView: View {
       maxWidth: .infinity,
       minHeight: topologyContentSize.height,
       maxHeight: .infinity)
-    .task {
-      model.startBonjourDiscovery()
-      model.refreshHostInternetSettings()
-      model.loadInitialSettingsIfPossible()
-    }
   }
 
   private func baseStationAccessibilityTitle(for device: AirportDiscoveredDevice) -> String {
@@ -143,7 +139,9 @@ struct TopologyView: View {
   }
 
   private var topologyContentSize: CGSize {
-    AirPortMainWindowMetrics.contentSize(forTopologyRootCount: model.topologyTrees.count)
+    AirPortMainWindowMetrics.contentSize(
+      forTopologyRootCount: model.topologyTrees.count,
+      topologyDepth: model.topologyTreeDepth)
   }
 
   private func containsHierarchy(_ tree: AirportTopologyTree) -> Bool {
@@ -217,14 +215,19 @@ private struct TopologyTreeView: View {
     VStack(spacing: 0) {
       deviceNode(tree.device)
       if !tree.children.isEmpty {
-        parentConnector
+        TopologyChildrenConnector(
+          wirelessConnections: tree.children.map {
+            model.isWirelessTopologyConnection(from: $0.device, to: tree.device)
+          },
+          childSpacing: tree.children.count > 1 ? 42 : 24
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: isCompact ? 24 : 44)
+        .accessibilityHidden(true)
         HStack(alignment: .top, spacing: tree.children.count > 1 ? 42 : 24) {
           ForEach(tree.children) { child in
-            VStack(spacing: 0) {
-              childConnector
-              TopologyTreeView(tree: child, isCompact: isCompact, present: present)
-                .environmentObject(model)
-            }
+            TopologyTreeView(tree: child, isCompact: isCompact, present: present)
+              .environmentObject(model)
           }
         }
       }
@@ -290,23 +293,6 @@ private struct TopologyTreeView: View {
     }
   }
 
-  private var parentConnector: some View {
-    VStack(spacing: 0) {
-      TopologyConnectorLine(length: isCompact ? 8 : 22)
-      if tree.children.count > 1 {
-        TopologyConnectorLine(
-          length: CGFloat(tree.children.count - 1) * (isCompact ? 172 : 230),
-          axis: .horizontal)
-      }
-    }
-    .accessibilityHidden(true)
-  }
-
-  private var childConnector: some View {
-    TopologyConnectorLine(length: isCompact ? 8 : 22)
-      .accessibilityHidden(true)
-  }
-
   private func devicePopoverBinding(for device: AirportDiscoveredDevice) -> Binding<Bool> {
     Binding {
       model.isDevicePopoverPresented && model.selectedTopologyDeviceID == device.id
@@ -330,6 +316,40 @@ private struct TopologyTreeView: View {
 
 }
 
+private struct TopologyChildrenConnector: View {
+  var wirelessConnections: [Bool]
+  var childSpacing: CGFloat
+
+  var body: some View {
+    Canvas { context, size in
+      guard !wirelessConnections.isEmpty else { return }
+      let middleX = size.width / 2
+      let middleY = size.height / 2
+      let centerSpacing = AirPortTopologyStyle.rootColumnWidth + childSpacing
+      let firstCenterX =
+        middleX
+        - CGFloat(wirelessConnections.count - 1) * centerSpacing / 2
+
+      for (index, isWireless) in wirelessConnections.enumerated() {
+        let childX = firstCenterX + CGFloat(index) * centerSpacing
+        var path = Path()
+        path.move(to: CGPoint(x: middleX, y: 0))
+        path.addLine(to: CGPoint(x: middleX, y: middleY))
+        path.addLine(to: CGPoint(x: childX, y: middleY))
+        path.addLine(to: CGPoint(x: childX, y: size.height))
+        context.stroke(
+          path,
+          with: .color(AirPortTopologyStyle.connector),
+          style: StrokeStyle(
+            lineWidth: 4,
+            lineCap: .round,
+            lineJoin: .round,
+            dash: isWireless ? [1, 8] : []))
+      }
+    }
+  }
+}
+
 private struct TopologyConnectorLine: View {
   enum Axis {
     case vertical
@@ -351,7 +371,8 @@ private struct TopologyConnectorLine: View {
       }
       .frame(
         width: axis == .vertical ? 4 : length,
-        height: axis == .vertical ? length : 4)
+        height: axis == .vertical ? length : 4
+      )
       .shadow(color: .black.opacity(0.22), radius: 1, x: 0, y: 1)
   }
 }
@@ -367,14 +388,16 @@ private struct TopologyRootConnector: View {
     TopologyRootConnectorShape(rootCount: rootCount, rootSpacing: rootSpacing, rootWidth: rootWidth)
       .stroke(
         AirPortTopologyStyle.connector,
-        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
+      )
       .overlay {
         TopologyRootConnectorShape(
           rootCount: rootCount, rootSpacing: rootSpacing, rootWidth: rootWidth
         )
         .stroke(
           AirPortTopologyStyle.connectorHighlight,
-          style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round))
+          style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round)
+        )
         .offset(x: -1.2, y: -1.2)
       }
       .frame(width: connectorWidth)
@@ -832,8 +855,9 @@ struct TopologyNode: View {
       .accessibilityHidden(true)
 
       TopologyNodeAccessibilityProxy(
-        label: accessibilityTitle, identifier: accessibilityIdentifier, action: action)
-        .frame(width: 200, height: nodeFrameHeight)
+        label: accessibilityTitle, identifier: accessibilityIdentifier, action: action
+      )
+      .frame(width: 200, height: nodeFrameHeight)
     }
   }
 }

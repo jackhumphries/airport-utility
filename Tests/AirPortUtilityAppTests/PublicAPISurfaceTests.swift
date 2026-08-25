@@ -18,6 +18,7 @@ final class PublicAPISurfaceTests: XCTestCase {
         "Sources/AirPortUtilityCore/AirportAppModelConfiguration.swift:public func showConfigureOther() {",
         "Sources/AirPortUtilityCore/AirportAppModelConfiguration.swift:public func showPasswords() {",
         "Sources/AirPortUtilityCore/AirportAppModelConfiguration.swift:public func showPreferences() {",
+        "Sources/AirPortUtilityCore/AirportAppModelConfiguration.swift:public func showSites() {",
         "Sources/AirPortUtilityCore/AirportAppModelConfiguration.swift:public var canShowPasswords: Bool {",
         "Sources/AirPortUtilityCore/AirportAppModelConfiguration.swift:public var defaultConfigurationFileName: String {",
         "Sources/AirPortUtilityCore/AirportAppModelRestart.swift:public func requestRestartBaseStation() {",
@@ -35,6 +36,8 @@ final class PublicAPISurfaceTests: XCTestCase {
         "Sources/AirPortUtilityCore/ContentView.swift:public var body: some View {",
         "Sources/AirPortUtilityCore/SnapshotRenderer.swift:public enum AirPortSnapshotRenderer {",
         "Sources/AirPortUtilityCore/SnapshotRenderer.swift:public static func renderAll(model: AirportAppModel, outputDirectory: URL) throws -> [URL] {",
+        "Sources/AirPortUtilityCore/StorageNotifications.swift:public enum HealthNotificationCenter {",
+        "Sources/AirPortUtilityCore/StorageNotifications.swift:public nonisolated static var isAvailableForCurrentProcess: Bool {",
       ])
   }
 

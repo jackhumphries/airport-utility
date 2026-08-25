@@ -105,6 +105,82 @@ final class PaneFlagTests: XCTestCase {
     XCTAssertEqual(trees.first?.children.map(\.device.id), ["express"])
   }
 
+  func testMostUpstreamAirPortChoosesTopologyRootInsteadOfExtender() {
+    let model = AirportAppModel(passwordStore: MemoryAirportPasswordStore())
+    let capsule = AirportDiscoveredDevice(
+      id: "capsule", name: "Time Capsule", hostName: "time-capsule.local",
+      modelName: "AirPort Time Capsule")
+    let express = AirportDiscoveredDevice(
+      id: "express", name: "Office Express", hostName: "office-express.local",
+      extendsDeviceID: capsule.id, modelName: "AirPort Express")
+
+    XCTAssertEqual(model.mostUpstreamAirPort(from: [express, capsule])?.id, capsule.id)
+  }
+
+  func testLaunchConnectionSelectsMostUpstreamAirPort() {
+    let model = AirportAppModel(passwordStore: MemoryAirportPasswordStore())
+    let capsule = AirportDiscoveredDevice(
+      id: "capsule", name: "Time Capsule", hostName: "time-capsule.local",
+      modelName: "AirPort Time Capsule")
+    let express = AirportDiscoveredDevice(
+      id: "express", name: "Office Express", hostName: "office-express.local",
+      extendsDeviceID: capsule.id, modelName: "AirPort Express")
+    model.updateDiscoveredDevices([express, capsule])
+
+    model.connectToMostUpstreamAirPortOnLaunch()
+
+    XCTAssertEqual(model.selectedTopologyDeviceID, capsule.id)
+    XCTAssertEqual(model.connection.host, "time-capsule.local")
+    XCTAssertEqual(model.status, "Enter base station password to load settings.")
+  }
+
+  func testManualTopologySelectionCancelsAutomaticLaunchSelection() {
+    let model = AirportAppModel(passwordStore: MemoryAirportPasswordStore())
+    let capsule = AirportDiscoveredDevice(
+      id: "capsule", name: "Time Capsule", hostName: "time-capsule.local",
+      modelName: "AirPort Time Capsule")
+    let express = AirportDiscoveredDevice(
+      id: "express", name: "Office Express", hostName: "office-express.local",
+      extendsDeviceID: capsule.id, modelName: "AirPort Express")
+    model.updateDiscoveredDevices([express, capsule])
+    model.selectTopologyDevice(express)
+
+    model.connectToMostUpstreamAirPortOnLaunch()
+
+    XCTAssertEqual(model.selectedTopologyDeviceID, express.id)
+    XCTAssertEqual(model.connection.host, "office-express.local")
+  }
+
+  func testTopologyConnectionUsesWirelessClientMACToSelectDottedStyle() {
+    let model = AirportAppModel()
+    model.connection.host = "time-capsule.local"
+    let capsule = AirportDiscoveredDevice(
+      id: "capsule",
+      name: "Time Capsule",
+      hostName: "time-capsule.local")
+    let wirelessExpress = AirportDiscoveredDevice(
+      id: "wireless-express",
+      name: "Garage APE",
+      hostName: "garage-ape.local",
+      identifiers: ["rama:d0-03-4b-64-aa-4e"],
+      extendsDeviceID: capsule.id)
+    let wiredExpress = AirportDiscoveredDevice(
+      id: "wired-express",
+      name: "Library APE",
+      hostName: "library-ape.local",
+      identifiers: ["rama:20-c9-d0-a3-1f-0e"],
+      extendsDeviceID: capsule.id)
+    model.wirelessClients = [
+      WirelessClient(
+        macAddress: "D0:03:4B:64:AA:4E",
+        ipAddress: "",
+        hostname: "")
+    ]
+
+    XCTAssertTrue(model.isWirelessTopologyConnection(from: wirelessExpress, to: capsule))
+    XCTAssertFalse(model.isWirelessTopologyConnection(from: wiredExpress, to: capsule))
+  }
+
   func testTopologyTreesSupportMixedIndependentAndExtendedDevices() {
     let capsule = AirportDiscoveredDevice(
       id: "capsule",
@@ -545,7 +621,8 @@ final class PaneFlagTests: XCTestCase {
       AirportAppModel.deviceStatusText(problemCodes: ["vErr01"]), "Configuration problem")
     XCTAssertEqual(AirportAppModel.deviceStatusText(problemCodes: ["DubN"]), "Double NAT")
     XCTAssertEqual(AirportAppModel.deviceStatusText(problemCodes: ["pubP"]), "Default password")
-    XCTAssertEqual(AirportAppModel.deviceStatusText(problemCodes: ["opNW"]), "Open wireless network")
+    XCTAssertEqual(
+      AirportAppModel.deviceStatusText(problemCodes: ["opNW"]), "Open wireless network")
     XCTAssertEqual(
       AirportAppModel.deviceStatusText(problemCodes: ["waCF"]), "WAN setup over Ethernet")
   }
@@ -695,7 +772,8 @@ final class PaneFlagTests: XCTestCase {
 
     let warningDevice = try XCTUnwrap(updates.last?.first)
     XCTAssertEqual(warningDevice.problemCodes, ["nDNS"])
-    XCTAssertEqual(AirportAppModel().deviceStatusText(for: warningDevice), "No DNS servers configured")
+    XCTAssertEqual(
+      AirportAppModel().deviceStatusText(for: warningDevice), "No DNS servers configured")
 
     browser.netService(
       service,
@@ -1483,6 +1561,10 @@ final class PaneFlagTests: XCTestCase {
       selectedImage: current,
       downloadRecorder: recorder)
     model.firmwareInstallVerificationDelayNanoseconds = 0
+    model.recoveryGuidance = RecoveryGuidance(
+      reason: .firmwareVerificationFailed,
+      host: AirportConnection.normalizedHost(model.connection.host),
+      deviceName: "stale", date: Date(), detail: "stale guidance")
 
     model.installSelectedFirmware()
     try await waitForIdle(model)
@@ -1498,6 +1580,7 @@ final class PaneFlagTests: XCTestCase {
     let device = try XCTUnwrap(model.visibleTopologyDevices.first)
     XCTAssertFalse(model.isTopologyDeviceUpdating(device))
     XCTAssertFalse(model.firmware.transferProgress.isVisible)
+    XCTAssertNil(model.recoveryGuidance)
   }
 
   func testFirmwareInstallReportsIncompleteBackendUploadProgress() async throws {
@@ -1644,6 +1727,7 @@ final class PaneFlagTests: XCTestCase {
           "Firmware verification failed: Firmware install completed, but the base station reports version 7.8.1 instead of 7.6.9."
         )
       })
+    XCTAssertEqual(model.recoveryGuidance?.reason, .firmwareVerificationFailed)
   }
 
   func testPreferencesMenuCommandPresentsPreferencesSheet() {
@@ -2161,7 +2245,7 @@ final class PaneFlagTests: XCTestCase {
     XCTAssertTrue(model.hasDevicePopoverDetails)
   }
 
-  func testWirelessClientsPollWhileDevicePopoverIsOpenAndClearOnClose() async throws {
+  func testWirelessClientsContinuePollingAfterDevicePopoverCloses() async throws {
     let model = AirportAppModel(passwordStore: MemoryAirportPasswordStore())
     let device = AirportDiscoveredDevice(
       id: "modern-extreme",
@@ -2212,11 +2296,10 @@ final class PaneFlagTests: XCTestCase {
     XCTAssertGreaterThanOrEqual(fetchCount, 1)
 
     model.isDevicePopoverPresented = false
-    let fetchCountAfterClose = fetchCount
-    XCTAssertTrue(model.wirelessClients.isEmpty)
-    XCTAssertFalse(model.hasLoadedWirelessClients)
-    try await Task.sleep(nanoseconds: 30_000_000)
-    XCTAssertEqual(fetchCount, fetchCountAfterClose)
+    XCTAssertEqual(model.wirelessClients.map(\.displayName), ["iphone.local"])
+    XCTAssertTrue(model.hasLoadedWirelessClients)
+    XCTAssertNotNil(model.wirelessClientPollTask)
+    model.stopWirelessClientPolling(clearClients: true)
   }
 
   func testWirelessClientPollingDefaultsToTwoSeconds() {
@@ -2564,6 +2647,21 @@ final class PaneFlagTests: XCTestCase {
 
     XCTAssertEqual(model.visibleTopologyDevices.map(\.displayName), ["Resolved"])
     XCTAssertEqual(model.visibleTopologyDevices.map(\.connectionHost), ["resolved.local"])
+  }
+
+  func testUnresolvedAirPortWithStableBonjourIdentityRemainsVisible() {
+    let model = AirportAppModel()
+    let express = AirportDiscoveredDevice(
+      id: "local|_airport._tcp.|Garage APE",
+      name: "Garage APE",
+      hostName: "",
+      identifiers: ["wama:d0-03-4b-5e-0c-2c", "rama:d0-03-4b-64-aa-4e"],
+      modelName: "AirPort Express",
+      productID: "115")
+    model.discoveredDevices = [express]
+
+    XCTAssertEqual(model.visibleTopologyDevices.map(\.id), [express.id])
+    XCTAssertEqual(model.visibleTopologyDevices.map(\.displayName), ["Garage APE"])
   }
 
   func testSelectingDiscoveredDeviceLoadsSavedPassword() {
@@ -5322,7 +5420,9 @@ final class PaneFlagTests: XCTestCase {
       try await waitForIdle(model)
 
       let command = try XCTUnwrap(onlyCommandLine(in: model), "file sharing: \(enabled)")
-      assertCommand(command, contains: [enabled ? "--usb-file-sharing-flags 1104" : "--usb-file-sharing-flags 1044"])
+      assertCommand(
+        command,
+        contains: [enabled ? "--usb-file-sharing-flags 1104" : "--usb-file-sharing-flags 1044"])
       XCTAssertFalse(model.hasPendingChanges, "\(enabled)")
     }
   }

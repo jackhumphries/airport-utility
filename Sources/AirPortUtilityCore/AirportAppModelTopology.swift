@@ -3,6 +3,12 @@ import Foundation
 @MainActor
 extension AirportAppModel {
   func loadInitialSettingsIfPossible() {
+    if !mockMode, hasStartedBonjourDiscovery, discoveredDevices.isEmpty,
+      selectedTopologyDeviceID == nil
+    {
+      status = "Scanning for AirPort base stations…"
+      return
+    }
     refreshLiveSettingsIfPossible()
   }
 
@@ -22,7 +28,8 @@ extension AirportAppModel {
 
   public var canRefreshNetwork: Bool {
     !isBusy && !isEditingDevice && !isShowingPasswords && !isShowingPreferences
-      && !isShowingConfigureOther && !isShowingSetup && !isShowingRestoreConfirmation
+      && !isShowingConfigureOther && !isShowingSites && !isShowingSetup
+      && !isShowingRestoreConfirmation
       && !isShowingRestartConfirmation && !isRestorePending && !isRestoringDefaults
       && !isInternetPopoverPresented
       && !isConnectionPopoverPresented
@@ -36,6 +43,10 @@ extension AirportAppModel {
     isInternetSelected = false
     selectedTopologyDeviceID = nil
     selectedTopologyDeviceIdentifiers = []
+    startupConnectionTask?.cancel()
+    startupConnectionTask = nil
+    hasAttemptedStartupConnection = false
+    hasManualTopologySelection = false
     preview = nil
     clearLoadedDeviceDetails(name: "")
 
@@ -55,6 +66,7 @@ extension AirportAppModel {
     reconcileBaseStationRestartTracking(with: devices)
     updateConnectedTopologyDeviceIdentifiers(from: devices)
     discoveredDevices = devices
+    updateSiteHostsFromDiscoveredDevices(devices)
     completeRestoreIfResetDeviceAvailable()
     if isShowingSetup, setup.step == .applying,
       !devices.contains(where: {
@@ -94,8 +106,52 @@ extension AirportAppModel {
       isEditingDevice = false
       preview = nil
     }
+    scheduleStartupConnectionToMostUpstreamAirPort()
     loadDefaultPasswordForDiscoveredDeviceIfAvailable(devices)
     loadSavedPasswordForDiscoveredDeviceIfAvailable(devices)
+  }
+
+  private func scheduleStartupConnectionToMostUpstreamAirPort() {
+    guard !mockMode, !hasAttemptedStartupConnection,
+      !hasManualTopologySelection, !hasLoadedSettings, !discoveredDevices.isEmpty
+    else { return }
+    startupConnectionTask?.cancel()
+    let delay = startupDiscoveryDebounceNanoseconds
+    startupConnectionTask = Task { @MainActor [weak self] in
+      try? await Task.sleep(nanoseconds: delay)
+      guard !Task.isCancelled else { return }
+      self?.connectToMostUpstreamAirPortOnLaunch()
+    }
+  }
+
+  func connectToMostUpstreamAirPortOnLaunch() {
+    startupConnectionTask = nil
+    guard !mockMode, !hasAttemptedStartupConnection,
+      !hasManualTopologySelection, !hasLoadedSettings, !isBusy,
+      let device = mostUpstreamAirPort(from: visibleTopologyDevices)
+    else { return }
+    hasAttemptedStartupConnection = true
+    selectTopologyDevice(device, isAutomaticStartupSelection: true)
+    appendLog("Connecting on launch to upstream AirPort \(device.displayName).")
+    refreshLiveSettingsIfPossible()
+  }
+
+  func mostUpstreamAirPort(
+    from devices: [AirportDiscoveredDevice]
+  ) -> AirportDiscoveredDevice? {
+    let roots = Self.topologyTrees(from: devices).map(\.device)
+    let currentHost = AirportConnection.normalizedHost(connection.host)
+    return roots.sorted { left, right in
+      let leftMatches = left.matchesConnectionHost(currentHost)
+      let rightMatches = right.matchesConnectionHost(currentHost)
+      if leftMatches != rightMatches { return leftMatches }
+      let leftIsTimeCapsule = left.displayModelName.localizedCaseInsensitiveContains("Time Capsule")
+        || left.displayName.localizedCaseInsensitiveContains("Time Capsule")
+      let rightIsTimeCapsule = right.displayModelName.localizedCaseInsensitiveContains("Time Capsule")
+        || right.displayName.localizedCaseInsensitiveContains("Time Capsule")
+      if leftIsTimeCapsule != rightIsTimeCapsule { return leftIsTimeCapsule }
+      return left.displayName.localizedCaseInsensitiveCompare(right.displayName) == .orderedAscending
+    }.first
   }
 
   func completeSetupIfRestartedDeviceAvailable() {
@@ -407,7 +463,7 @@ extension AirportAppModel {
 
   func supportsPane(_ pane: Pane) -> Bool {
     switch pane {
-    case .baseStation, .internet, .wireless, .network:
+    case .baseStation, .internet, .wireless, .network, .diagnostics:
       return true
     case .airPlay:
       return capabilities.supportsAirPlay
@@ -506,8 +562,7 @@ extension AirportAppModel {
     return (visibleDevices, hidTransientGenericDevice)
   }
 
-  private func shouldHideTransientGenericTopologyDevice(_ device: AirportDiscoveredDevice) -> Bool
-  {
+  private func shouldHideTransientGenericTopologyDevice(_ device: AirportDiscoveredDevice) -> Bool {
     guard isGenericRestartTopologyDevice(device) else { return false }
     guard preservedTopologyDisplaySnapshot(for: device) == nil else { return false }
     return hasRecentTopologyDisplaySnapshot
@@ -659,8 +714,9 @@ extension AirportAppModel {
       let identifiers = device.normalizedStableIdentifiers
       let hosts = device.normalizedConnectionHosts
       guard !name.isEmpty || !identifiers.isEmpty || !hosts.isEmpty else { continue }
-      guard !Self.shouldReplaceUpdatingTopologyModelName(device.modelName)
-        || !Self.shouldReplaceUpdatingTopologyProductID(device.productID)
+      guard
+        !Self.shouldReplaceUpdatingTopologyModelName(device.modelName)
+          || !Self.shouldReplaceUpdatingTopologyProductID(device.productID)
       else {
         continue
       }
@@ -702,7 +758,8 @@ extension AirportAppModel {
     }
   }
 
-  private func restorePreservedTopologyDevicePlacement(in devices: inout [AirportDiscoveredDevice]) {
+  private func restorePreservedTopologyDevicePlacement(in devices: inout [AirportDiscoveredDevice])
+  {
     for index in devices.indices {
       guard let snapshot = preservedTopologyDisplaySnapshot(for: devices[index]),
         let targetIndex = snapshot.rootIndex,
@@ -717,7 +774,61 @@ extension AirportAppModel {
   }
 
   var topologyTrees: [AirportTopologyTree] {
-    Self.topologyTrees(from: visibleTopologyDevices)
+    Self.topologyTrees(from: devicesWithInferredPrimaryRelationships())
+  }
+
+  private func devicesWithInferredPrimaryRelationships() -> [AirportDiscoveredDevice] {
+    var devices = visibleTopologyDevices
+    guard devices.count > 1 else { return devices }
+    let connectionHost = AirportConnection.normalizedHost(connection.host)
+    guard let primary = devices.first(where: { $0.matchesConnectionHost(connectionHost) }) else {
+      return devices
+    }
+    let clientMACs = Set(wirelessClients.map { Self.normalizedHardwareAddress($0.macAddress) })
+    let primaryNetworkName = wireless.networkName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    for index in devices.indices where devices[index].id != primary.id {
+      guard devices[index].extendsDeviceID == nil else { continue }
+      let deviceMACs = devices[index].identifiers.compactMap(Self.hardwareAddressIdentifier)
+      let isWirelessClient = deviceMACs.contains(where: clientMACs.contains)
+      let advertisedNetwork =
+        devices[index].txtFields["ranm"]?
+        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+      let sharesPrimaryNetwork =
+        !primaryNetworkName.isEmpty
+        && advertisedNetwork.compare(
+          primaryNetworkName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+      if isWirelessClient || sharesPrimaryNetwork {
+        devices[index].extendsDeviceID = primary.id
+      }
+    }
+    return devices
+  }
+
+  func isWirelessTopologyConnection(
+    from child: AirportDiscoveredDevice,
+    to parent: AirportDiscoveredDevice
+  ) -> Bool {
+    guard
+      child.extendsDeviceID == parent.id
+        || parent.matchesConnectionHost(AirportConnection.normalizedHost(connection.host))
+    else { return false }
+    let clientMACs = Set(wirelessClients.map { Self.normalizedHardwareAddress($0.macAddress) })
+    return child.identifiers.compactMap(Self.hardwareAddressIdentifier)
+      .contains(where: clientMACs.contains)
+  }
+
+  private static func hardwareAddressIdentifier(_ identifier: String) -> String? {
+    guard let separator = identifier.firstIndex(of: ":") else { return nil }
+    let key = identifier[..<separator].lowercased()
+    guard key == "wama" || key == "rama" else { return nil }
+    let value = String(identifier[identifier.index(after: separator)...])
+    let normalized = normalizedHardwareAddress(value)
+    return normalized.isEmpty ? nil : normalized
+  }
+
+  private static func normalizedHardwareAddress(_ value: String) -> String {
+    value.lowercased().filter { $0.isHexDigit }
   }
 
   var topologyDevicePlacements: [TopologyDevicePlacement] {
@@ -845,7 +956,8 @@ extension AirportAppModel {
     if let device = selectedTopologyDevice() {
       identifiers += firmwareBadgeIdentifiers(for: device, fallbackHosts: [connection.host])
     }
-    identifiers += [connection.host, connectedTopologyDeviceHost].map(AirportConnection.normalizedHost)
+    identifiers += [connection.host, connectedTopologyDeviceHost].map(
+      AirportConnection.normalizedHost)
     return Self.uniqueNonEmptyValues(identifiers)
   }
 
@@ -990,7 +1102,11 @@ extension AirportAppModel {
     -> [AirportDiscoveredDevice]
   {
     var deduplicated: [AirportDiscoveredDevice] = []
-    for device in devices where !device.normalizedConnectionHosts.isEmpty {
+    for device in devices {
+      let hasDiscoveryIdentity =
+        !device.normalizedConnectionHosts.isEmpty
+        || !device.normalizedStableIdentifiers.isEmpty
+      guard hasDiscoveryIdentity else { continue }
       if let index = deduplicated.firstIndex(where: {
         $0.sharesConnectionIdentity(with: device)
           || shouldCollapseConnectedRenameCandidate($0, device)
@@ -1086,7 +1202,7 @@ extension AirportAppModel {
     connectedTopologyDeviceHost = ""
   }
 
-  private func rememberSelectedTopologyDeviceIdentity(_ device: AirportDiscoveredDevice) {
+  func rememberSelectedTopologyDeviceIdentity(_ device: AirportDiscoveredDevice) {
     selectedTopologyDeviceIdentifiers = device.normalizedStableIdentifiers
     if !device.normalizedStableIdentifiers.isEmpty {
       connectedTopologyDeviceIdentifiers = device.normalizedStableIdentifiers
@@ -1136,7 +1252,7 @@ extension AirportAppModel {
     }
   }
 
-  private func isKnownConnectedTopologyDevice(
+  func isKnownConnectedTopologyDevice(
     _ device: AirportDiscoveredDevice, connectionHost: String
   ) -> Bool {
     device.matchesConnectionHost(connectionHost)
@@ -1145,7 +1261,15 @@ extension AirportAppModel {
       || device.sharesStableIdentity(with: updatingBaseStationDeviceIdentifiers)
   }
 
-  func selectTopologyDevice(_ device: AirportDiscoveredDevice) {
+  func selectTopologyDevice(
+    _ device: AirportDiscoveredDevice,
+    isAutomaticStartupSelection: Bool = false
+  ) {
+    if !isAutomaticStartupSelection {
+      hasManualTopologySelection = true
+      startupConnectionTask?.cancel()
+      startupConnectionTask = nil
+    }
     isInternetPopoverPresented = false
     isInternetSelected = false
     cacheCurrentConnectionPasswordForSession()

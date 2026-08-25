@@ -58,6 +58,31 @@ enum AirportCommandError: LocalizedError, Sendable {
 }
 
 final class AirportCommandRunner: @unchecked Sendable {
+  // Only backend/airport_backend.py is ever launched directly as a subprocess
+  // (confirmed by ADR-0001's audit of Sources/ script-path references); every
+  // call site above passes one of AirportCommand's script constants, all of
+  // which resolve to that single entry point. A packaged release build
+  // freezes it into a self-contained executable at this sibling path instead
+  // of shipping the .py source (see ADR-0001 and build-app.sh); a source
+  // checkout only has the .py file, and keeps using the system python3
+  // shebang unchanged. Resolving this here, rather than changing every call
+  // site's script constant, keeps the frozen/source choice in one place.
+  private static let frozenBackendRelativePath = "airportbackend/airportbackend"
+
+  private static func resolvedExecutableURL(forScript scriptURL: URL) -> URL {
+    // scriptURL is .../backend/airport_backend.py; the frozen build sits
+    // alongside it at .../backend/airportbackend/airportbackend.
+    let frozenURL =
+      scriptURL
+      .deletingLastPathComponent()
+      .appendingPathComponent(frozenBackendRelativePath)
+      .standardizedFileURL
+    if FileManager.default.isExecutableFile(atPath: frozenURL.path) {
+      return frozenURL
+    }
+    return scriptURL
+  }
+
   func run(
     script: String, arguments: [String], connection: AirportConnection, timeout: TimeInterval = 45,
     outputHandler: (@Sendable (AirportCommandOutputChunk) -> Void)? = nil
@@ -66,14 +91,18 @@ final class AirportCommandRunner: @unchecked Sendable {
       let scriptURL = URL(
         fileURLWithPath: script, relativeTo: URL(fileURLWithPath: connection.repoPath)
       ).standardizedFileURL
-      guard FileManager.default.fileExists(atPath: scriptURL.path) else {
-        throw AirportCommandError.missingScript(scriptURL.path)
+      let executableURL = Self.resolvedExecutableURL(forScript: scriptURL)
+      guard FileManager.default.fileExists(atPath: executableURL.path) else {
+        throw AirportCommandError.missingScript(executableURL.path)
       }
 
       let process = Process()
-      process.executableURL = scriptURL
+      process.executableURL = executableURL
       process.arguments = arguments
       process.currentDirectoryURL = URL(fileURLWithPath: connection.repoPath)
+      var environment = ProcessInfo.processInfo.environment
+      environment["PYTHONDONTWRITEBYTECODE"] = "1"
+      process.environment = environment
 
       let stdout = PipeOutputBuffer { text in
         outputHandler?(AirportCommandOutputChunk(stream: .stdout, text: text))

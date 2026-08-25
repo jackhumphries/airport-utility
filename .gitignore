@@ -11,3 +11,9 @@ local-artifacts/network-captures/
 *.log
 *.keylog
 DerivedData/
+
+.swiftpm/
+
+Prototype/self-contained-runtime/build/
+Prototype/self-contained-runtime/dist/
+Prototype/self-contained-runtime/*.spec

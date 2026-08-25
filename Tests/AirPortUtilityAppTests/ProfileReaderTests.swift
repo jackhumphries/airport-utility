@@ -4,6 +4,19 @@ import XCTest
 
 @MainActor
 final class ProfileReaderTests: XCTestCase {
+  func testProfileReaderDescribesRawFileSharingSetting() {
+    let reader = ProfileReader(
+      .object([
+        "restoreProfile": .object([
+          "bsFS": .object(["type": .string("int"), "text": .string(" 1 ")])
+        ])
+      ]))
+
+    XCTAssertEqual(
+      reader.diagnosticDescription("restoreProfile.bsFS"),
+      "{text:  1 , type: int}")
+    XCTAssertEqual(reader.boolFromInt("restoreProfile.bsFS"), true)
+  }
   func testWirelessClientDisplayNamePrefersHostnameThenIPAddressThenMACAddress() {
     XCTAssertEqual(
       WirelessClient(
@@ -29,6 +42,22 @@ final class ProfileReaderTests: XCTestCase {
     XCTAssertEqual(
       WirelessClient(macAddress: " ", ipAddress: " ", hostname: " ").displayName,
       "")
+  }
+
+  func testWirelessClientAdvertisedHostnameIsTrimmedAndDoesNotFallBackToAddress() {
+    XCTAssertEqual(
+      WirelessClient(
+        macAddress: "C8:BC:C8:30:CD:3B",
+        ipAddress: "192.168.4.41",
+        hostname: "  iphone.local  "
+      ).advertisedHostname,
+      "iphone.local")
+    XCTAssertNil(
+      WirelessClient(
+        macAddress: "C8:BC:C8:30:CD:3B",
+        ipAddress: "192.168.4.41",
+        hostname: "  "
+      ).advertisedHostname)
   }
 
   func testLegacySNMPCommunityUsesConfiguredValueOrFallsBackToAdminPassword() {

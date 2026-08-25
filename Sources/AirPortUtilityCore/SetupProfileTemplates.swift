@@ -27,16 +27,20 @@ enum SetupProfileTemplates {
 
   static func load(productID: String, modelName: String = "") throws -> JSONValue {
     let tracedProductID = tracedProductID(for: productID, modelName: modelName)
-    guard let url = Bundle.module.url(
-      forResource: "SetupProfile-\(tracedProductID)", withExtension: "json")
+    guard let url = resourceURL(
+      name: "SetupProfile-\(tracedProductID)", extension: "json")
     else { throw TemplateError.missing(productID) }
     return try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: url))
   }
 
   static func loadLegacyExtreme() throws -> JSONValue {
-    guard let url = Bundle.module.url(
-      forResource: "LegacySetupProfile-3", withExtension: "json")
+    guard let url = resourceURL(name: "LegacySetupProfile-3", extension: "json")
     else { throw TemplateError.missing("3") }
     return try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: url))
+  }
+
+  private static func resourceURL(name: String, extension fileExtension: String) -> URL? {
+    Bundle.main.url(forResource: name, withExtension: fileExtension)
+      ?? Bundle.module.url(forResource: name, withExtension: fileExtension)
   }
 }

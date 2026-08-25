@@ -19,6 +19,9 @@ func airPortReplacementNSImage(named name: String) -> NSImage? {
 }
 
 private func airPortReplacementResourceURL(named name: String) -> URL? {
+  if let url = Bundle.main.url(forResource: name, withExtension: nil) {
+    return url
+  }
   if let url = Bundle.module.url(forResource: name, withExtension: nil) {
     return url
   }
@@ -50,11 +53,30 @@ enum AirPortReplacementArtwork {
 
 public struct ContentView: View {
   @EnvironmentObject private var model: AirportAppModel
+  @State private var appView: AppView = .dashboard
 
   public init() {}
 
   public var body: some View {
-    TopologyView()
+    appContent
+      .safeAreaInset(edge: .top, spacing: 0) {
+        HStack {
+          Picker("View", selection: $appView) {
+            ForEach(AppView.allCases) { view in
+              Label(view.rawValue, systemImage: view.systemImage)
+                .tag(view)
+            }
+          }
+          .pickerStyle(.segmented)
+          .labelsHidden()
+          .frame(width: 260)
+
+          Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.bar)
+      }
       .background {
         MainWindowContentSizeSynchronizer(contentSize: model.mainWindowContentSize)
       }
@@ -76,6 +98,13 @@ public struct ContentView: View {
         ConfigureOtherSheet()
           .environmentObject(model)
       }
+      .sheet(isPresented: $model.isShowingSites) {
+        SitesSheet()
+          .environmentObject(model)
+      }
+      .sheet(item: $model.settingsComparison) { comparison in
+        SettingsDiffSheet(comparison: comparison)
+      }
       .sheet(isPresented: $model.isShowingSetup) {
         AirPortSetupSheet()
           .environmentObject(model)
@@ -88,7 +117,22 @@ public struct ContentView: View {
         RestoreDefaultSettingsSheet()
           .environmentObject(model)
       }
+      .task {
+        model.startBonjourDiscovery()
+        model.refreshHostInternetSettings()
+        model.loadInitialSettingsIfPossible()
+      }
       .preferredColorScheme(.dark)
+  }
+
+  @ViewBuilder
+  private var appContent: some View {
+    switch appView {
+    case .dashboard:
+      DashboardPane()
+    case .topology:
+      TopologyView()
+    }
   }
 
   @ViewBuilder
@@ -110,6 +154,24 @@ public struct ContentView: View {
       AdvancedPane()
     case .firmware:
       FirmwarePane()
+    case .diagnostics:
+      DiagnosticsPane()
+    }
+  }
+}
+
+private enum AppView: String, CaseIterable, Identifiable {
+  case dashboard = "Dashboard"
+  case topology = "Network Map"
+
+  var id: Self { self }
+
+  var systemImage: String {
+    switch self {
+    case .dashboard:
+      "gauge.with.dots.needle.67percent"
+    case .topology:
+      "point.3.connected.trianglepath.dotted"
     }
   }
 }
@@ -128,6 +190,7 @@ public enum AirPortMainWindowMetrics {
 
   static func contentSize(
     forTopologyRootCount rootCount: Int,
+    topologyDepth: Int = 1,
     configurationPanes: [Pane]? = nil
   ) -> CGSize {
     let topologyWidth =
@@ -135,9 +198,10 @@ public enum AirPortMainWindowMetrics {
     let configurationWidth = configurationPanes.map(AirPortLayout.configurationSheetWidth) ?? 0
     let configurationHeight =
       configurationPanes == nil ? 0 : AirPortLayout.configurationSheetHeight
+    let topologyHeight = contentSize.height + CGFloat(max(topologyDepth - 1, 0)) * 150
     return CGSize(
       width: max(contentSize.width, ceil(topologyWidth), configurationWidth),
-      height: max(contentSize.height, configurationHeight))
+      height: max(topologyHeight, configurationHeight))
   }
 
   static func topologyRootsWidth(forRootCount rootCount: Int) -> CGFloat {
@@ -165,8 +229,9 @@ public enum AirPortMainWindowMetrics {
     let targetContentSize = NSSize(
       width: max(currentContentSize.width, contentSize.width),
       height: max(currentContentSize.height, contentSize.height))
-    guard abs(currentContentSize.width - targetContentSize.width) > 0.5
-      || abs(currentContentSize.height - targetContentSize.height) > 0.5
+    guard
+      abs(currentContentSize.width - targetContentSize.width) > 0.5
+        || abs(currentContentSize.height - targetContentSize.height) > 0.5
     else {
       return
     }
@@ -175,11 +240,20 @@ public enum AirPortMainWindowMetrics {
 }
 
 @MainActor
-private extension AirportAppModel {
+extension AirportAppModel {
   var mainWindowContentSize: CGSize {
     AirPortMainWindowMetrics.contentSize(
       forTopologyRootCount: topologyTrees.count,
+      topologyDepth: topologyTreeDepth,
       configurationPanes: isEditingDevice ? visiblePanes : nil)
+  }
+
+  var topologyTreeDepth: Int {
+    topologyTrees.map(Self.depth(of:)).max() ?? 1
+  }
+
+  private static func depth(of tree: AirportTopologyTree) -> Int {
+    1 + (tree.children.map(depth(of:)).max() ?? 0)
   }
 }
 

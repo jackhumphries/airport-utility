@@ -1,0 +1,60 @@
+name: Hardware compatibility report
+description: Report how a specific AirPort/Time Capsule model behaves with this app — especially an unrecognised or partially-working device.
+labels:
+  - hardware-compatibility
+body:
+  - type: markdown
+    attributes:
+      value: |
+        See [docs/hardware-compatibility.md](../../docs/hardware-compatibility.md)
+        for how the app decides "recognised" vs "unrecognised" vs "unidentified",
+        and what a support bundle contains. New compatibility profiles are only
+        added once they're backed by a real report like this one plus a
+        regression test — please don't guess at values you're not sure of;
+        leave a field blank instead.
+  - type: input
+    id: model
+    attributes:
+      label: Physical model number
+      description: e.g. A1354 — printed on the underside of the device.
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version
+      description: From the app's Firmware pane, if it loads.
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+    validations:
+      required: true
+  - type: dropdown
+    id: assessment
+    attributes:
+      label: What did the app show in Diagnostics → Hardware Compatibility?
+      options:
+        - Recognised
+        - Unrecognised
+        - Unidentified
+        - App did not load Diagnostics / crashed before showing this
+    validations:
+      required: true
+  - type: textarea
+    id: operation
+    attributes:
+      label: What were you trying to do, and what happened?
+      description: The exact operation that succeeded or failed (e.g. "read Wireless settings", "erase disk"), and the actual result — an error message, a hang, wrong data shown, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: bundle
+    attributes:
+      label: Redacted support bundle
+      description: |
+        Diagnostics → Export Support Bundle. Review the JSON preview before
+        exporting — passwords, client hardware addresses, backup paths, and
+        raw configuration payloads are excluded already, but double-check
+        before pasting it here since this report is public.
+      render: json

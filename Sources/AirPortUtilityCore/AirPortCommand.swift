@@ -125,11 +125,15 @@ enum AirportCommand {
   static func wirelessClients(
     connection: AirportConnection,
     usesLegacyACP: Bool,
-    snmpCommunity: String
+    snmpCommunity: String,
+    discoverIdentities: Bool = false
   ) -> [String] {
     var arguments = [
       "wireless-clients", normalizedHost(connection), "--json",
     ]
+    if discoverIdentities {
+      arguments.append("--discover-identities")
+    }
     if usesLegacyACP {
       arguments += ["--legacy", "--snmp-community", snmpCommunity]
     } else {

@@ -44,6 +44,39 @@ enum AirportMockBackend {
     (maStJSON, DiskInventoryParser.parse(stdout: maStJSON))
   }
 
+  /// Sample wireless clients for mock/snapshot mode, covering: a real Apple
+  /// OUI with a hostname that resolves a device-type guess, a real Sonos
+  /// OUI with a vendor-only guess, a real Epson OUI, an OUI not present in
+  /// the curated vendor table (unrecognised, not a random guess), and a
+  /// locally-administered (randomized) address to exercise the "Private
+  /// address" path. Prefixes are real, verified entries from the bundled
+  /// oui-vendors.json - see docs/client-identification.md.
+  static var sampleWirelessClients: [WirelessClient] {
+    [
+      WirelessClient(
+        macAddress: "00:03:93:aa:bb:01", ipAddress: "192.168.4.21",
+        hostname: "Grahams-iPhone", rssi: -45, dataRateMbps: 866, phyMode: "ac"),
+      WirelessClient(
+        macAddress: "00:0e:58:aa:bb:02", ipAddress: "192.168.4.22",
+        hostname: "Living-Room-Sonos", rssi: -58, dataRateMbps: 144, phyMode: "n"),
+      WirelessClient(
+        macAddress: "00:00:48:aa:bb:03", ipAddress: "192.168.4.23",
+        hostname: "EPSON-Printer", rssi: -67, dataRateMbps: 72, phyMode: "n"),
+      WirelessClient(
+        // 0x10's second-least-significant bit is 0 - a genuine
+        // universally-administered address, just not one in the curated
+        // vendor table. (0xAA, used in an earlier draft, actually has that
+        // bit set, which meant this example was accidentally exercising
+        // the same "private address" path as the entry below instead of a
+        // real unrecognised-vendor case.)
+        macAddress: "10:00:00:00:00:04", ipAddress: "192.168.4.24",
+        hostname: "unknown-device", rssi: -71, dataRateMbps: 130, phyMode: "n"),
+      WirelessClient(
+        macAddress: "02:00:00:00:00:05", ipAddress: "192.168.4.25",
+        hostname: "", rssi: -88, dataRateMbps: 65, phyMode: "n"),
+    ]
+  }
+
   static func productID(environmentValue: EnvironmentLookup) -> String {
     let value =
       environmentValue("AIRPORT_UTILITY_MOCK_PRODUCT_ID")?

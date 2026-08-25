@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import ipaddress
 import re
+import socket
 import subprocess
+import time
+from urllib.parse import unquote
 from concurrent.futures import ThreadPoolExecutor, wait
 from typing import Any, Callable, Iterable
 
@@ -39,6 +42,10 @@ _IPV4_PATTERN = re.compile(
 )
 _HOSTNAME_LOOKUP_BUDGET_SECONDS = 1.0
 _HOSTNAME_LOOKUP_MAX_WORKERS = 8
+_NEIGHBOR_DISCOVERY_PREFIX_LENGTH = 24
+_NEIGHBOR_DISCOVERY_MAX_WORKERS = 48
+_NEIGHBOR_DISCOVERY_PING_WAIT_MILLISECONDS = 250
+_NEIGHBOR_DISCOVERY_PROCESS_TIMEOUT_SECONDS = 0.75
 
 
 def normalize_mac(value: Any) -> str | None:
@@ -437,6 +444,217 @@ def read_neighbor_cache(
     return mappings
 
 
+def _resolved_private_ipv4(
+    host: str,
+    *,
+    getaddrinfo: Callable[..., list[tuple[Any, ...]]] = socket.getaddrinfo,
+) -> ipaddress.IPv4Address | None:
+    normalized_host = host.strip().strip("[]")
+    try:
+        address = ipaddress.ip_address(normalized_host)
+    except ValueError:
+        try:
+            results = getaddrinfo(
+                normalized_host,
+                None,
+                socket.AF_INET,
+                socket.SOCK_DGRAM,
+            )
+        except OSError:
+            return None
+        address = next(
+            (
+                ipaddress.ip_address(result[4][0])
+                for result in results
+                if len(result) >= 5 and result[4]
+            ),
+            None,
+        )
+    if not isinstance(address, ipaddress.IPv4Address):
+        return None
+    if not (address.is_private or address.is_link_local):
+        return None
+    return address
+
+
+_LOCAL_INTERFACE_PATTERN = re.compile(
+    r"inet\s+(?P<ip>\d+\.\d+\.\d+\.\d+)\s+(?:-->\s+\S+\s+)?netmask\s+0x(?P<mask>[0-9a-fA-F]{8})"
+)
+
+
+def read_local_ipv4_networks(
+    *,
+    run: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+) -> list[ipaddress.IPv4Network]:
+    """Read this Mac's own local IPv4 interface subnets, loopback excluded.
+
+    Parsed from ``ifconfig`` (no third-party dependency) rather than a
+    higher-level API, matching the parsing approach already used for
+    ``arp -an``/``ndp -an`` above.
+    """
+
+    try:
+        result = run(
+            ["/sbin/ifconfig"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if result.returncode:
+        return []
+    networks: list[ipaddress.IPv4Network] = []
+    for match in _LOCAL_INTERFACE_PATTERN.finditer(result.stdout):
+        try:
+            address = ipaddress.ip_address(match.group("ip"))
+        except ValueError:
+            continue
+        if not isinstance(address, ipaddress.IPv4Address) or address.is_loopback:
+            continue
+        prefix_length = bin(int(match.group("mask"), 16)).count("1")
+        try:
+            networks.append(
+                ipaddress.ip_network(f"{address}/{prefix_length}", strict=False)
+            )
+        except ValueError:
+            continue
+    return networks
+
+
+def _is_on_a_local_network(
+    address: ipaddress.IPv4Address, networks: Iterable[ipaddress.IPv4Network]
+) -> bool:
+    return any(address in network for network in networks)
+
+
+def local_network_mismatch_note(
+    host: str,
+    *,
+    getaddrinfo: Callable[..., list[tuple[Any, ...]]] = socket.getaddrinfo,
+    read_local_networks: Callable[
+        [], list[ipaddress.IPv4Network]
+    ] = read_local_ipv4_networks,
+) -> str | None:
+    """A user-facing note when the base station isn't on this Mac's own network.
+
+    Returns ``None`` in the normal case (the base station's address is on
+    one of this Mac's local networks, or didn't resolve to a private address
+    at all - a different, unrelated situation). Otherwise returns text
+    explaining why client IP addresses and hostnames can't be resolved right
+    now, without assuming a specific cause (VPN, remote access, or a genuine
+    double-NAT all produce this same, correctly-reported condition).
+    """
+
+    address = _resolved_private_ipv4(host, getaddrinfo=getaddrinfo)
+    if address is None:
+        return None
+    if _is_on_a_local_network(address, read_local_networks()):
+        return None
+    return (
+        f"This Mac isn't on the same local network as the base station ({address}), "
+        "so connected clients' IP addresses and hostnames can't be resolved. This is "
+        "expected when connecting over a VPN or other remote access, or across a "
+        "double-NAT boundary."
+    )
+
+
+def discover_neighbor_cache(
+    host: str,
+    *,
+    getaddrinfo: Callable[..., list[tuple[Any, ...]]] = socket.getaddrinfo,
+    run: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    read_cache: Callable[[], dict[str, list[str]]] = read_neighbor_cache,
+    read_local_networks: Callable[
+        [], list[ipaddress.IPv4Network]
+    ] = read_local_ipv4_networks,
+    max_workers: int = _NEIGHBOR_DISCOVERY_MAX_WORKERS,
+    diagnostic: Callable[[str], None] | None = None,
+) -> dict[str, list[str]]:
+    """Prime the local /24 neighbour table before correlating clients by MAC.
+
+    AirPorts in bridge mode know a station's MAC address but do not own the
+    upstream DHCP lease that maps it to an IP address. Bounded concurrent ICMP
+    probes ask macOS to resolve reachable local peers into ARP without opening
+    an application session.
+    """
+
+    before = read_cache()
+    address = _resolved_private_ipv4(host, getaddrinfo=getaddrinfo)
+    if address is None:
+        if diagnostic is not None:
+            diagnostic(
+                f"base station {host!r} did not resolve to a private IPv4 address; "
+                f"sweep skipped; neighbor mappings before={_mapping_count(before)}"
+            )
+        return before
+    local_networks = read_local_networks()
+    if not _is_on_a_local_network(address, local_networks):
+        if diagnostic is not None:
+            local_summary = ", ".join(str(network) for network in local_networks)
+            diagnostic(
+                f"base station address={address} is not on any of this Mac's local "
+                f"networks ({local_summary or 'none detected'}); IP/hostname discovery "
+                "requires sharing a local network segment with the base station, which "
+                "is not possible over a VPN/remote-access connection or across a "
+                "double-NAT boundary; sweep skipped; "
+                f"neighbor mappings before={_mapping_count(before)}"
+            )
+        return before
+    network = ipaddress.ip_network(
+        f"{address}/{_NEIGHBOR_DISCOVERY_PREFIX_LENGTH}",
+        strict=False,
+    )
+    if diagnostic is not None:
+        diagnostic(
+            f"base station address={address}; selected subnet={network}; "
+            f"neighbor mappings before={_mapping_count(before)}"
+        )
+
+    def ping(candidate: ipaddress.IPv4Address) -> bool:
+        try:
+            result = run(
+                [
+                    "/sbin/ping",
+                    "-n",
+                    "-q",
+                    "-c",
+                    "1",
+                    "-W",
+                    str(_NEIGHBOR_DISCOVERY_PING_WAIT_MILLISECONDS),
+                    str(candidate),
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=_NEIGHBOR_DISCOVERY_PROCESS_TIMEOUT_SECONDS,
+                check=False,
+            )
+            return result.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+
+    candidates = list(network.hosts())
+    started = time.monotonic()
+    with ThreadPoolExecutor(
+        max_workers=max(1, min(max_workers, len(candidates)))
+    ) as executor:
+        responses = sum(executor.map(ping, candidates))
+    elapsed = time.monotonic() - started
+    after = read_cache()
+    if diagnostic is not None:
+        diagnostic(
+            f"reachability sweep duration={elapsed:.3f}s; "
+            f"responsive hosts={responses}/{len(candidates)}; "
+            f"neighbor mappings after={_mapping_count(after)}"
+        )
+    return after
+
+
+def _mapping_count(mappings: dict[str, list[str]]) -> int:
+    return sum(len(addresses) for addresses in mappings.values())
+
+
 def reverse_hostname(
     ip: str,
     *,
@@ -465,6 +683,81 @@ def reverse_hostname(
     return ""
 
 
+def smb_hostname(
+    ip: str,
+    *,
+    run: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+) -> str:
+    """Return a Windows or Samba system name advertised through NetBIOS."""
+
+    try:
+        result = run(
+            ["/usr/bin/smbutil", "status", "-a", ip],
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=1,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    if result.returncode:
+        return ""
+    for line in result.stdout.splitlines():
+        key, separator, value = line.partition(":")
+        if separator and key.strip().lower() == "server":
+            hostname = unquote(value.strip()).rstrip(".")
+            if hostname and hostname != ip:
+                return hostname
+    for line in result.stdout.splitlines():
+        match = re.match(
+            r"^\s*([^\s<]+)\s+<00>\s+-\s+(?!<GROUP>)",
+            line,
+            re.IGNORECASE,
+        )
+        if match is not None:
+            return unquote(match.group(1)).rstrip(".")
+    return ""
+
+
+def cross_platform_hostname(
+    ip: str,
+    *,
+    reverse_lookup: Callable[[str], str] | None = None,
+    smb_lookup: Callable[[str], str] | None = None,
+) -> str:
+    """Resolve DNS/mDNS first, then Windows and Samba naming."""
+
+    reverse_lookup = reverse_lookup or reverse_hostname
+    smb_lookup = smb_lookup or smb_hostname
+    return reverse_lookup(ip) or smb_lookup(ip)
+
+
+def diagnostic_hostname(
+    ip: str,
+    *,
+    diagnostic: Callable[[str], None],
+    reverse_lookup: Callable[[str], str] | None = None,
+    smb_lookup: Callable[[str], str] | None = None,
+) -> str:
+    """Resolve a host while reporting every attempted source."""
+
+    reverse_lookup = reverse_lookup or reverse_hostname
+    smb_lookup = smb_lookup or smb_hostname
+    diagnostic(f"resolver reverse DNS/mDNS attempted for {ip}")
+    hostname = reverse_lookup(ip)
+    if hostname:
+        diagnostic(f"resolved {ip} name={hostname!r} source=reverse DNS/mDNS")
+        return hostname
+    diagnostic(f"resolver SMB/NetBIOS attempted for {ip}")
+    hostname = smb_lookup(ip)
+    if hostname:
+        diagnostic(f"resolved {ip} name={hostname!r} source=SMB/NetBIOS")
+        return hostname
+    diagnostic(f"resolved {ip} name unavailable; source=none")
+    return ""
+
+
 def resolved_client_records(
     macs: Iterable[str],
     *,
@@ -474,13 +767,14 @@ def resolved_client_records(
     hostname_lookup: Callable[[str], str] | None = None,
     hostname_lookup_budget_seconds: float = _HOSTNAME_LOOKUP_BUDGET_SECONDS,
     hostname_lookup_max_workers: int = _HOSTNAME_LOOKUP_MAX_WORKERS,
+    diagnostic: Callable[[str], None] | None = None,
 ) -> list[dict[str, Any]]:
     """Resolve associated stations while retaining MAC-only associations."""
 
     addresses_by_mac = addresses_by_mac or {}
     neighbor_addresses = neighbor_addresses or {}
     details_by_mac = details_by_mac or {}
-    hostname_lookup = hostname_lookup or reverse_hostname
+    hostname_lookup = hostname_lookup or cross_platform_hostname
     records: list[dict[str, Any]] = []
     for raw_mac in macs:
         mac = normalize_mac(raw_mac)
@@ -494,6 +788,8 @@ def resolved_client_records(
             if ip not in candidates:
                 candidates.append(ip)
         if not candidates:
+            if diagnostic is not None:
+                diagnostic(f"exact MAC match {mac}: no IP mapping")
             records.append(
                 {
                     "macAddress": mac,
@@ -514,6 +810,8 @@ def resolved_client_records(
 
         candidates.sort(key=address_preference)
         ip = candidates[0]
+        if diagnostic is not None:
+            diagnostic(f"exact MAC match {mac}: IP={ip}")
         records.append(
             {
                 "macAddress": mac,
@@ -534,7 +832,12 @@ def resolved_client_records(
     executor = ThreadPoolExecutor(
         max_workers=max(1, min(hostname_lookup_max_workers, len(ips)))
     )
-    futures = {executor.submit(hostname_lookup, ip): ip for ip in ips}
+    def lookup(ip: str) -> str:
+        if diagnostic is not None and hostname_lookup is cross_platform_hostname:
+            return diagnostic_hostname(ip, diagnostic=diagnostic)
+        return hostname_lookup(ip)
+
+    futures = {executor.submit(lookup, ip): ip for ip in ips}
     try:
         completed, pending = wait(
             futures,
@@ -550,6 +853,8 @@ def resolved_client_records(
                 hostnames[futures[future]] = hostname
         for future in pending:
             future.cancel()
+            if diagnostic is not None:
+                diagnostic(f"resolver budget expired for {futures[future]}")
     finally:
         # Each production lookup also has its own one-second subprocess
         # timeout. Do not make the caller wait serially for unfinished lookups

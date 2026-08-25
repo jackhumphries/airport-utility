@@ -1,0 +1,95 @@
+name: Runtime packaging spike
+
+# Validates ADR-0001 (docs/architecture/ADR-0001-self-contained-backend-runtime.md):
+# freezing backend/airport_backend.py into a self-contained PyInstaller
+# --onedir executable. This does not sign or notarise anything (see
+# docs/release/apple-credentials-needed.md) and does not yet feed
+# build-app.sh — it's the packaging spike's own regression suite, kept green
+# until it's wired into the real release build.
+#
+# arm64 only, by design: Apple deprecated x86_64 as of OS 26 and is dropping
+# it entirely in OS 28, so an x86_64 build isn't worth chasing for this app's
+# lifetime. (An earlier version of this workflow did build x86_64 too, and
+# found a real, serious bug along the way: Apple's system libcrypto.44.dylib
+# crashes calling PBKDF2/HMAC under Rosetta 2 translation, which would have
+# broken backend/srp.py's key derivation on every encrypted session if the
+# x86_64 build ever ran on Apple Silicon via Rosetta. That finding stays
+# recorded in Prototype/self-contained-runtime/NOTES.md and
+# docs/architecture/nested-code-signing-inventory.md in case x86_64 support
+# is ever revisited before it's fully dropped.)
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "backend/**"
+      - "Tests/BackendPythonTests/**"
+      - "Prototype/self-contained-runtime/**"
+      - "Scripts/check-path-leakage.sh"
+      - ".github/workflows/runtime-packaging.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "Tests/BackendPythonTests/**"
+      - "Prototype/self-contained-runtime/**"
+      - "Scripts/check-path-leakage.sh"
+      - ".github/workflows/runtime-packaging.yml"
+  workflow_dispatch:
+
+jobs:
+  freeze-and-verify:
+    name: Freeze backend (arm64)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Confirm interpreter architecture
+        run: python3 -c "import platform; print(platform.machine())"
+
+      - name: Create build venv
+        run: python3 -m venv "$RUNNER_TEMP/build-venv"
+
+      - name: Install PyInstaller
+        run: |
+          "$RUNNER_TEMP/build-venv/bin/pip" install --upgrade pip pyinstaller
+
+      - name: Run backend unit tests under the freezer's own interpreter
+        run: |
+          "$RUNNER_TEMP/build-venv/bin/python3" -m unittest -v Tests/BackendPythonTests/test_backend_modules.py
+
+      - name: Freeze backend and verify --help works with PATH stripped
+        run: |
+          export PATH="$RUNNER_TEMP/build-venv/bin:$PATH"
+          ./Prototype/self-contained-runtime/build-prototype.sh
+
+      - name: Verify frozen executable is arm64
+        run: |
+          FROZEN="Prototype/self-contained-runtime/dist/airportbackend/airportbackend"
+          lipo -info "$FROZEN"
+          lipo -info "$FROZEN" | grep -q "arm64"
+
+      - name: Verify frozen executable matches unfrozen source (--dry-run-json)
+        run: |
+          FROZEN="Prototype/self-contained-runtime/dist/airportbackend/airportbackend"
+          SOURCE_OUT="$RUNNER_TEMP/source-dry-run.json"
+          FROZEN_OUT="$RUNNER_TEMP/frozen-dry-run.json"
+
+          "$RUNNER_TEMP/build-venv/bin/python3" backend/airport_backend.py \
+            10.0.1.1 --password test --setting syNm --value CIParityCheck --dry-run-json > "$SOURCE_OUT"
+
+          env -i PATH=/nonexistent HOME="$HOME" "$FROZEN" \
+            10.0.1.1 --password test --setting syNm --value CIParityCheck --dry-run-json > "$FROZEN_OUT"
+
+          diff "$SOURCE_OUT" "$FROZEN_OUT"
+
+      - name: Upload frozen artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: airportbackend-arm64
+          path: Prototype/self-contained-runtime/dist/airportbackend/
+          retention-days: 14
+          if-no-files-found: error

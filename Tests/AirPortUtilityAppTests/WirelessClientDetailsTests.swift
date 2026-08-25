@@ -23,7 +23,9 @@ final class WirelessClientDetailsTests: XCTestCase {
         WirelessClientDetailRow(label: "quality", value: "Excellent"),
         WirelessClientDetailRow(label: "data rate", value: "866 Mb/s"),
         WirelessClientDetailRow(label: "RSSI", value: "-39 dBm"),
+        WirelessClientDetailRow(label: "SNR", value: "53 dB"),
         WirelessClientDetailRow(label: "PHY mode", value: "802.11a/n/ac"),
+        WirelessClientDetailRow(label: "band", value: "5 GHz"),
       ])
   }
 
@@ -44,9 +46,47 @@ final class WirelessClientDetailsTests: XCTestCase {
         "Excellent",
         "36 Mb/s",
         "-42 dBm",
+        "56 dB",
+        "Unknown",
         "Unknown",
       ])
-    XCTAssertFalse(client.detailRows.contains(where: { $0.label == "noise" }))
+  }
+
+  func testBandIsDerivedOnlyFromExclusiveBandPHYMarkers() {
+    let cases: [(String?, String)] = [
+      ("802.11a/n/ac", "5 GHz"),
+      ("802.11b/g/n", "2.4 GHz"),
+      ("802.11g", "2.4 GHz"),
+      ("802.11ac", "5 GHz"),
+      // 802.11n and 802.11ax are dual-band standards - ambiguous alone.
+      ("802.11n", "Unknown"),
+      ("802.11ax", "Unknown"),
+      (nil, "Unknown"),
+      ("", "Unknown"),
+    ]
+
+    for (phyMode, expectedBand) in cases {
+      let client = WirelessClient(
+        macAddress: "00:11:22:33:44:55",
+        ipAddress: "",
+        hostname: "",
+        phyMode: phyMode)
+      XCTAssertEqual(
+        client.detailRows.last?.value, expectedBand, "phyMode \(phyMode ?? "nil")")
+    }
+  }
+
+  func testSNRIsOnlyComputedWhenBothSignalAndNoiseAreKnown() {
+    let withBoth = WirelessClient(
+      macAddress: "00:11:22:33:44:55", ipAddress: "", hostname: "", rssi: -39, noise: -92)
+    let withoutNoise = WirelessClient(
+      macAddress: "00:11:22:33:44:55", ipAddress: "", hostname: "", rssi: -39)
+    let withoutRSSI = WirelessClient(
+      macAddress: "00:11:22:33:44:55", ipAddress: "", hostname: "", noise: -92)
+
+    XCTAssertEqual(withBoth.detailRows[4].value, "53 dB")
+    XCTAssertEqual(withoutNoise.detailRows[4].value, "Unknown")
+    XCTAssertEqual(withoutRSSI.detailRows[4].value, "Unknown")
   }
 
   func testQualityBucketsMatchAirPortUtilityBarsForRSSI() {
@@ -108,6 +148,8 @@ final class WirelessClientDetailsTests: XCTestCase {
         "Unknown",
         "Unknown",
         "Unknown",
+        "Unknown",
+        "Unknown",
       ])
   }
 
@@ -117,6 +159,7 @@ final class WirelessClientDetailsTests: XCTestCase {
       ipAddress: "",
       hostname: "",
       rssi: -39,
+      noise: -92,
       dataRateMbps: 866,
       phyMode: "802.11a/n/ac")
     let view = WirelessClientDetailsContentView()
@@ -124,7 +167,7 @@ final class WirelessClientDetailsTests: XCTestCase {
     view.configure(client: client)
 
     XCTAssertGreaterThan(view.frame.width, 253)
-    XCTAssertEqual(view.frame.height, 124)
+    XCTAssertEqual(view.frame.height, 159)
     let fields = view.subviews.compactMap { $0 as? NSTextField }
     XCTAssertEqual(
       fields.map(\.stringValue),
@@ -133,7 +176,9 @@ final class WirelessClientDetailsTests: XCTestCase {
         "quality", "Excellent",
         "data rate", "866 Mb/s",
         "RSSI", "-39 dBm",
+        "SNR", "53 dB",
         "PHY mode", "802.11a/n/ac",
+        "band", "5 GHz",
       ])
     XCTAssertEqual(fields[0].frame.minX, 19)
     XCTAssertEqual(fields[0].frame.minY, 19)
@@ -148,12 +193,13 @@ final class WirelessClientDetailsTests: XCTestCase {
     XCTAssertGreaterThanOrEqual(
       fields[1].frame.width,
       ceil(fields[1].intrinsicContentSize.width))
-    XCTAssertEqual(fields[8].frame.minX, 19)
-    XCTAssertEqual(fields[8].frame.minY, 89)
-    XCTAssertEqual(fields[8].frame.height, 16)
-    XCTAssertEqual(fields[8].frame.width, fields[0].frame.width)
-    XCTAssertEqual(fields[9].frame.minX, fields[8].frame.maxX + 6)
-    XCTAssertEqual(fields[9].frame.width, fields[1].frame.width)
+    // Row index 6 of 7 (band) - the panel's last row.
+    XCTAssertEqual(fields[12].frame.minX, 19)
+    XCTAssertEqual(fields[12].frame.minY, 124)
+    XCTAssertEqual(fields[12].frame.height, 16)
+    XCTAssertEqual(fields[12].frame.width, fields[0].frame.width)
+    XCTAssertEqual(fields[13].frame.minX, fields[12].frame.maxX + 6)
+    XCTAssertEqual(fields[13].frame.width, fields[1].frame.width)
     XCTAssertEqual(
       fields[0].identifier?.rawValue,
       "popover.wirelessClients.details.label.hardware-address")

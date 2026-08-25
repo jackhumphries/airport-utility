@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  DRAFT — not yet applied to build-app.sh. See
+  docs/architecture/hardened-runtime-entitlements.md for the rationale behind
+  every entry (and every deliberately-omitted entry) below. This has not been
+  verified against a real Developer ID signing identity or the notary
+  service; treat it as a starting point for that verification, not as a
+  finished artifact.
+
+  This targets Developer ID + hardened runtime distribution, NOT the Mac App
+  Store and NOT App Sandbox. Enabling App Sandbox is a separate, larger
+  architectural decision (it would require reworking disk/log/config file
+  access through security-scoped bookmarks and would restrict subprocess
+  execution) and is intentionally out of scope here — see the doc above.
+-->
+<plist version="1.0">
+<dict>
+  <!--
+    Explicitly false for release builds. Allowing task ports lets a debugger
+    attach to the running process; Apple's notary service rejects it, and it
+    should never be true in a distributed build. Included explicitly (rather
+    than omitted) so a debug-entitlements variant can override it visibly
+    instead of silently inheriting a default.
+  -->
+  <key>com.apple.security.get-task-allow</key>
+  <false/>
+</dict>
+</plist>

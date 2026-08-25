@@ -85,6 +85,18 @@ final class AirPortCommandTests: XCTestCase {
         "--legacy", "--snmp-community", "private-community",
       ])
     XCTAssertEqual(AirportCommand.redact(legacy).last, "<password>")
+
+    let identityDiscovery = AirportCommand.wirelessClients(
+      connection: connection,
+      usesLegacyACP: false,
+      snmpCommunity: "",
+      discoverIdentities: true)
+    XCTAssertEqual(
+      identityDiscovery,
+      [
+        "wireless-clients", "192.168.4.45", "--json",
+        "--discover-identities", "--password", "secret",
+      ])
   }
 
   func testRedactsInlinePasswordArguments() {

@@ -10,6 +10,138 @@ enum DiskInventoryParser {
     return records(in: value, parentBuiltIn: nil)
   }
 
+  static func diagnosticFieldSummary(stdout: String) -> String {
+    guard let data = stdout.data(using: .utf8),
+      let root = try? JSONDecoder().decode(JSONValue.self, from: data)
+    else { return "disk inventory JSON could not be decoded" }
+    let focused = inventoryValue(in: root) ?? root
+    var paths: [String] = []
+    collectFieldPaths(in: focused, path: "diskInventory", into: &paths)
+    return paths.isEmpty ? "disk inventory contains no fields" : paths.sorted().joined(separator: ", ")
+  }
+
+  static func diagnosticMetricSummary(stdout: String) -> String {
+    guard let data = stdout.data(using: .utf8),
+      let root = try? JSONDecoder().decode(JSONValue.self, from: data)
+    else { return "disk inventory metrics could not be decoded" }
+    let focused = inventoryValue(in: root) ?? root
+    var metrics: [String] = []
+    collectDiagnosticMetrics(in: focused, path: "diskInventory", into: &metrics)
+    return metrics.isEmpty ? "no disk metrics reported" : metrics.sorted().joined(separator: ", ")
+  }
+
+  static func smartStatuses(stdout: String) -> [String] {
+    guard let data = stdout.data(using: .utf8),
+      let root = try? JSONDecoder().decode(JSONValue.self, from: data)
+    else { return [] }
+    let focused = inventoryValue(in: root) ?? root
+    var statuses: [String] = []
+    collectSMARTStatuses(in: focused, into: &statuses)
+    return statuses.reduce(into: []) { result, status in
+      if !result.contains(where: { $0.caseInsensitiveCompare(status) == .orderedSame }) {
+        result.append(status)
+      }
+    }
+  }
+
+  static func diagnosticRecordSummary(_ records: [DiskRecord]) -> String {
+    guard !records.isEmpty else { return "no parsed volumes" }
+    return records.enumerated().map { index, record in
+      let name = record.name.trimmingCharacters(in: .whitespacesAndNewlines)
+      let format = record.format.trimmingCharacters(in: .whitespacesAndNewlines)
+      return "volume[\(index)] device=\(record.deviceName.isEmpty ? "<missing>" : record.deviceName) "
+        + "name=\(name.isEmpty ? "<missing>" : name) "
+        + "format=\(format.isEmpty ? "<missing>" : format) "
+        + "size=\(record.size.map(String.init) ?? "<missing>") "
+        + "sizeFree=\(record.sizeFree.map(String.init) ?? "<missing>") "
+        + "builtIn=\(record.builtIn)"
+    }.joined(separator: "; ")
+  }
+
+  private static func inventoryValue(in value: JSONValue) -> JSONValue? {
+    guard case .object(let object) = value else { return nil }
+    if let settings = object["settings"], case .object(let settingsObject) = settings,
+      let inventory = settingsObject["MaSt"]
+    {
+      return inventory
+    }
+    if let inventory = object["MaSt"] { return inventory }
+    return nil
+  }
+
+  private static func collectFieldPaths(
+    in value: JSONValue, path: String, into paths: inout [String]
+  ) {
+    switch value {
+    case .object(let object):
+      if object.isEmpty { paths.append(path + "={}") }
+      for key in object.keys.sorted() {
+        collectFieldPaths(in: object[key]!, path: path + "." + key, into: &paths)
+      }
+    case .array(let values):
+      if values.isEmpty { paths.append(path + "=[]") }
+      for (index, item) in values.enumerated() {
+        collectFieldPaths(in: item, path: path + "[\(index)]", into: &paths)
+      }
+    case .null: paths.append(path + "=null")
+    case .bool: paths.append(path + "=<bool>")
+    case .number: paths.append(path + "=<number>")
+    case .string: paths.append(path + "=<string>")
+    }
+  }
+
+  private static func collectDiagnosticMetrics(
+    in value: JSONValue, path: String, into metrics: inout [String]
+  ) {
+    switch value {
+    case .object(let object):
+      for key in object.keys.sorted() {
+        let childPath = path + "." + key
+        if key == "decimal" || key == "smartStatus" || key == "blockSize" {
+          if let description = scalarDescription(object[key]!) {
+            metrics.append(childPath + "=" + description)
+          }
+        }
+        collectDiagnosticMetrics(in: object[key]!, path: childPath, into: &metrics)
+      }
+    case .array(let values):
+      for (index, item) in values.enumerated() {
+        collectDiagnosticMetrics(in: item, path: path + "[\(index)]", into: &metrics)
+      }
+    default:
+      break
+    }
+  }
+
+  private static func collectSMARTStatuses(in value: JSONValue, into statuses: inout [String]) {
+    switch value {
+    case .object(let object):
+      if case .string(let status)? = object["smartStatus"] {
+        let status = status.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !status.isEmpty { statuses.append(status) }
+      }
+      for child in object.values {
+        collectSMARTStatuses(in: child, into: &statuses)
+      }
+    case .array(let values):
+      for child in values {
+        collectSMARTStatuses(in: child, into: &statuses)
+      }
+    default:
+      break
+    }
+  }
+
+  private static func scalarDescription(_ value: JSONValue) -> String? {
+    switch value {
+    case .string(let value): return value
+    case .number(let value):
+      return value.rounded() == value ? String(format: "%.0f", value) : String(value)
+    case .bool(let value): return String(value)
+    default: return nil
+    }
+  }
+
   private static func records(in value: JSONValue, parentBuiltIn: Bool?) -> [DiskRecord] {
     switch value {
     case .array(let values):
@@ -118,7 +250,15 @@ enum DiskInventoryParser {
     case .number(let number):
       return safeInt64(number)
     case .string(let text):
-      return Int64(text)
+      return Int64(text.trimmingCharacters(in: .whitespacesAndNewlines))
+    case .object(let object):
+      if case .string(let decimal)? = object["decimal"] {
+        return Int64(decimal.trimmingCharacters(in: .whitespacesAndNewlines))
+      }
+      if let rawValue = object["value"] {
+        return int64(rawValue)
+      }
+      return nil
     default:
       return nil
     }

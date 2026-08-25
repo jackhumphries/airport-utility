@@ -29,24 +29,26 @@ enum AirPortLayout {
     panes.reduce(CGFloat(0)) { $0 + topTabWidth(for: $1) }
   }
 
-  static func topTabWidth(for pane: Pane) -> CGFloat {
-    switch pane {
-    case .baseStation:
-      99
-    case .internet:
-      70
-    case .wireless:
-      74
-    case .network:
-      73
-    case .airPlay:
-      67
-    case .disks:
-      55
-    case .advanced:
-      79
-    case .firmware:
-      82
+    static func topTabWidth(for pane: Pane) -> CGFloat {
+      switch pane {
+      case .baseStation:
+        99
+      case .internet:
+        70
+      case .wireless:
+        74
+      case .network:
+        73
+      case .airPlay:
+        67
+      case .disks:
+        55
+      case .advanced:
+        79
+      case .firmware:
+        82
+      case .diagnostics:
+        90
     }
   }
 }

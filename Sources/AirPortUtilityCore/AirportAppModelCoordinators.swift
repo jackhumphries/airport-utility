@@ -9,6 +9,10 @@ final class ConnectionSession {
 @MainActor
 final class TopologyStore {
   var selectedDeviceID: String?
+  var startupConnectionTask: Task<Void, Never>?
+  var hasAttemptedStartupConnection = false
+  var hasManualTopologySelection = false
+  var startupDiscoveryDebounceNanoseconds: UInt64 = 750_000_000
   var updatingBaseStationHost: String?
   var updatingBaseStationDeviceID: String?
   var selectedDeviceIdentifiers: [String] = []
@@ -33,6 +37,9 @@ final class TopologyStore {
   var wirelessClientPollTask: Task<Void, Never>?
   var wirelessClientPollGeneration = UUID()
   var wirelessClientPollIntervalNanoseconds: UInt64 = 2_000_000_000
+  var wirelessClientIdentityDiscoveryInterval: TimeInterval = 300
+  var wirelessClientIdentityDiscoveryHost = ""
+  var lastWirelessClientIdentityDiscoveryDate: Date?
   var wirelessClientFetchOverride:
     (@MainActor (AirportConnection, Bool, String) async throws -> [WirelessClient])?
   var legacySNMPCommunity = ""

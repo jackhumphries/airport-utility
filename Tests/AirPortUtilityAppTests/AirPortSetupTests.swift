@@ -553,6 +553,46 @@ final class AirPortSetupTests: XCTestCase {
     XCTAssertEqual(model.status, "Could not confirm Office Express came back online.")
     XCTAssertTrue(
       model.logs.contains("Stopped waiting for Office Express to finish restarting."))
+    XCTAssertEqual(model.recoveryGuidance?.reason, .restartDidNotComplete)
+    XCTAssertEqual(model.recoveryGuidance?.deviceName, "Office Express")
+  }
+
+  func testRestartCompletionClearsRecoveryGuidance() async throws {
+    let model = AirportAppModel()
+    let device = AirportDiscoveredDevice(
+      id: "express", name: "Office Express", hostName: "office-express.local.",
+      identifiers: ["wama:00-1b-63-21-f5-8e"], productID: "102")
+    model.updateDiscoveredDevices([device])
+    model.selectTopologyDevice(device)
+    model.connection.password = "password"
+    model.hasLoadedSettings = true
+    let restartID = model.beginBaseStationRestartTracking(
+      device: device, requestHost: device.connectionHost)
+    model.markBaseStationRestartCommandAccepted(
+      id: restartID,
+      requestHost: AirportConnection.normalizedHost(device.connectionHost))
+    model.recoveryGuidance = RecoveryGuidance(
+      reason: .restartDidNotComplete,
+      host: AirportConnection.normalizedHost(device.connectionHost),
+      deviceName: "Office Express", date: Date(), detail: "stale guidance")
+    var probeCount = 0
+    model.baseStationRestartProbeOverride = { _, _, _ in
+      probeCount += 1
+      return probeCount > 1
+    }
+    model.baseStationRestartPollIntervalNanoseconds = 1_000_000
+    model.startBaseStationRestartRecoveryPolling(
+      id: restartID,
+      connection: model.connection,
+      usesLegacyTransport: true,
+      usesACP17Transport: true)
+    model.updateDiscoveredDevices([device])
+
+    for _ in 0..<200 where model.recoveryGuidance != nil {
+      try await Task.sleep(nanoseconds: 2_000_000)
+    }
+
+    XCTAssertNil(model.recoveryGuidance)
   }
 
   func testRestoreUsesCapturedEmptyFactoryResetThenRebootProperties() throws {

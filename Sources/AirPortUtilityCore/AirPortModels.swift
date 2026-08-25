@@ -22,6 +22,13 @@ struct AirportConnection: Equatable, Sendable {
 
   static func defaultRepoPath() -> String {
     let fileManager = FileManager.default
+
+    if let resourcesURL = Bundle.main.resourceURL,
+      containsBackendScripts(resourcesURL, fileManager: fileManager)
+    {
+      return resourcesURL.path
+    }
+
     let currentURL = URL(fileURLWithPath: fileManager.currentDirectoryPath)
     if containsBackendScripts(currentURL, fileManager: fileManager) {
       return currentURL.path
@@ -39,14 +46,47 @@ struct AirportConnection: Equatable, Sendable {
       }
     }
 
+    #if DEBUG
+      // Xcode development fallback (running directly from Xcode rather than
+      // via run.sh, where cwd-based detection above already succeeds).
+      // #filePath deliberately excluded from release builds: it embeds this
+      // machine's absolute checkout path as a literal string in the compiled
+      // binary, which Scripts/check-path-leakage.sh correctly flags as a
+      // packager-identity leak. #if DEBUG keeps that string out of release
+      // builds entirely, rather than trying to strip it after the fact —
+      // it isn't debug-info metadata that `strip` would remove, since the
+      // fallback logic actually uses the string at runtime.
+      let sourceRoot = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()  // AirPortUtilityCore
+        .deletingLastPathComponent()  // Sources
+        .deletingLastPathComponent()  // Repository root
+
+      if fileManager.fileExists(
+        atPath: sourceRoot.appendingPathComponent("backend/airport_backend.py").path
+      ) {
+        return sourceRoot.path
+      }
+    #endif
+
     return currentURL.path
   }
-
-  private static func containsBackendScripts(_ url: URL, fileManager: FileManager) -> Bool {
-    fileManager.fileExists(atPath: url.appendingPathComponent("backend/airport_backend.py").path)
+  private static func containsBackendScripts(
+    _ url: URL,
+    fileManager: FileManager
+  ) -> Bool {
+    // A source checkout ships backend/airport_backend.py directly. A packaged
+    // release build (see build-app.sh, ADR-0001) instead ships only the
+    // frozen self-contained executable at
+    // backend/airportbackend/airportbackend, with no .py sources at all —
+    // both must be recognized as "this is a valid backend location."
+    fileManager.fileExists(
+      atPath: url.appendingPathComponent("backend/airport_backend.py").path
+    )
+      || fileManager.isExecutableFile(
+        atPath: url.appendingPathComponent("backend/airportbackend/airportbackend").path
+      )
   }
 }
-
 struct WirelessClient: Codable, Equatable, Identifiable, Sendable {
   var macAddress: String
   var ipAddress: String
@@ -58,9 +98,13 @@ struct WirelessClient: Codable, Equatable, Identifiable, Sendable {
 
   var id: String { macAddress }
 
-  var displayName: String {
+  var advertisedHostname: String? {
     let hostname = hostname.trimmingCharacters(in: .whitespacesAndNewlines)
-    if !hostname.isEmpty {
+    return hostname.isEmpty ? nil : hostname
+  }
+
+  var displayName: String {
+    if let hostname = advertisedHostname {
       return hostname
     }
     let ipAddress = ipAddress.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -85,8 +129,14 @@ struct WirelessClient: Codable, Equatable, Identifiable, Sendable {
         label: "RSSI",
         value: rssiLabel),
       WirelessClientDetailRow(
+        label: "SNR",
+        value: snrLabel),
+      WirelessClientDetailRow(
         label: "PHY mode",
         value: phyModeLabel),
+      WirelessClientDetailRow(
+        label: "band",
+        value: bandLabel),
     ]
   }
 
@@ -136,6 +186,33 @@ struct WirelessClient: Codable, Equatable, Identifiable, Sendable {
     let mode = phyMode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     return mode.isEmpty ? "Unknown" : mode
   }
+
+  private var snrLabel: String {
+    guard let normalizedRSSI, let noise else { return "Unknown" }
+    return "\(normalizedRSSI - noise) dB"
+  }
+
+  /// 802.11a and 802.11ac are 5 GHz-only standards; 802.11b and 802.11g are
+  /// 2.4 GHz-only. 802.11n/ax operate on both bands, so their presence alone
+  /// (without an exclusive marker for either band) is genuinely ambiguous -
+  /// reported as unknown rather than guessed, matching the AirPort's own
+  /// "802.11n (802.11a/b/g compatible)" convention for disambiguating it.
+  private var bandLabel: String {
+    guard let phyMode else { return "Unknown" }
+    let tokens =
+      phyMode
+      .replacingOccurrences(of: "802.11", with: "")
+      .lowercased()
+      .split(separator: "/")
+    guard !tokens.isEmpty else { return "Unknown" }
+    let fiveGHzOnlyMarkers: Set<Substring> = ["a", "ac"]
+    let twoPointFourGHzOnlyMarkers: Set<Substring> = ["b", "g"]
+    let hasFiveGHzMarker = tokens.contains { fiveGHzOnlyMarkers.contains($0) }
+    let hasTwoPointFourGHzMarker = tokens.contains { twoPointFourGHzOnlyMarkers.contains($0) }
+    if hasFiveGHzMarker && !hasTwoPointFourGHzMarker { return "5 GHz" }
+    if hasTwoPointFourGHzMarker && !hasFiveGHzMarker { return "2.4 GHz" }
+    return "Unknown"
+  }
 }
 
 struct WirelessClientDetailRow: Equatable, Sendable {
@@ -184,6 +261,7 @@ enum Pane: String, CaseIterable, Identifiable, Sendable, Codable {
   case disks = "Disks"
   case advanced = "Advanced"
   case firmware = "Firmware"
+  case diagnostics = "Diagnostics"
 
   var id: String { rawValue }
 }
@@ -922,7 +1000,8 @@ struct DeviceCapabilities: Equatable, Codable {
     supportsIPv6 = try container.decodeIfPresent(Bool.self, forKey: .supportsIPv6) ?? true
     supportsDynamicGlobalHostname =
       try container.decodeIfPresent(Bool.self, forKey: .supportsDynamicGlobalHostname) ?? true
-    supportsClassicWDS = try container.decodeIfPresent(Bool.self, forKey: .supportsClassicWDS) ?? false
+    supportsClassicWDS =
+      try container.decodeIfPresent(Bool.self, forKey: .supportsClassicWDS) ?? false
     supportsModem = try container.decodeIfPresent(Bool.self, forKey: .supportsModem) ?? false
     supportsLogging = try container.decodeIfPresent(Bool.self, forKey: .supportsLogging) ?? false
     supportsPPPDialIn =

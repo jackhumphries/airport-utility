@@ -201,6 +201,12 @@ extension AirportAppModel {
         self.status = "Could not confirm \(deviceName) came back online."
       }
       self.appendLog("Stopped waiting for \(deviceName) to finish restarting.")
+      self.recoveryGuidance = RecoveryGuidance(
+        reason: .restartDidNotComplete,
+        host: AirportConnection.normalizedHost(tracker.connectionHosts.first ?? ""),
+        deviceName: deviceName,
+        date: Date(),
+        detail: "Could not confirm \(deviceName) came back online.")
     }
     baseStationRestartTimeoutTasks = tasks
   }
@@ -314,6 +320,7 @@ extension AirportAppModel {
       restoreConnectionStatusAfterRestart()
     }
     appendLog("Confirmed \(tracker.displaySnapshot.displayName) came back online.")
+    clearRecoveryGuidance(forHost: tracker.connectionHosts.first ?? "")
   }
 
   private func baseStationRestartWaitingStatus(

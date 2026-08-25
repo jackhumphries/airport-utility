@@ -2,10 +2,11 @@ import AirPortUtilityCore
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
+import UserNotifications
 
 @main
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
   private let model = AirportAppModel()
   private var windowController: NSWindowController?
   private var topologyDisplayLogTimer: Timer?
@@ -29,6 +30,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
+    if HealthNotificationCenter.isAvailableForCurrentProcess {
+      UNUserNotificationCenter.current().delegate = self
+    }
     installMainMenu()
     if ProcessInfo.processInfo.environment["AIRPORT_UTILITY_SNAPSHOT"] == "1" {
       renderSnapshotsAndQuit()
@@ -40,6 +44,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self?.startTopologyDisplayLog()
       }
     }
+  }
+
+  nonisolated func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification
+  ) async -> UNNotificationPresentationOptions {
+    [.banner, .sound]
   }
 
   func applicationWillTerminate(_ notification: Notification) {
@@ -218,6 +229,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let menu = NSMenu(title: "File")
     menu.addItem(
       item("Configure Other...", action: #selector(configureOther(_:)), target: self))
+    menu.addItem(
+      item("Sites...", action: #selector(sites(_:)), target: self))
     menu.addItem(NSMenuItem.separator())
     menu.addItem(
       item(
@@ -323,6 +336,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   @objc private func configureOther(_ sender: Any?) {
     showMainWindow()
     model.showConfigureOther()
+  }
+
+  @objc private func sites(_ sender: Any?) {
+    showMainWindow()
+    model.showSites()
   }
 
   @objc func importConfigurationFile(_ sender: Any?) {

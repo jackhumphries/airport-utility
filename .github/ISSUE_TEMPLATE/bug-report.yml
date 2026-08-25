@@ -1,0 +1,38 @@
+name: Bug report
+description: Something isn't working correctly.
+labels:
+  - bug
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What you expected instead, and the exact steps to reproduce it.
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: AirPort/Time Capsule model (if relevant)
+      description: e.g. A1354 — see docs/hardware-compatibility.md if this might be a compatibility issue rather than a bug.
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Shown in About AirPort Utility, or the release tag if you know it.
+  - type: textarea
+    id: bundle
+    attributes:
+      label: Redacted support bundle (optional but very helpful)
+      description: |
+        Diagnostics → Export Support Bundle. Review the JSON preview before
+        exporting — passwords, client hardware addresses, backup paths, and
+        raw configuration payloads are excluded already, but double-check
+        before pasting it here since this report is public.
+      render: json

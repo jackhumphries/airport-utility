@@ -2,18 +2,19 @@
 
 ## Supported Versions
 
-AirPort Utility is currently a beta project without published releases. Security
-updates are made only on the latest revision of the `main` branch.
+AirPort Utility Powerhouse is a beta project. Security updates are made to the
+latest beta and the current `main` branch.
 
 | Version | Supported |
 | --- | --- |
+| Latest beta release | Yes |
 | Latest `main` | Yes |
 | Older revisions and forks | No |
 
 ## Reporting a Vulnerability
 
 Please report suspected vulnerabilities privately through
-[GitHub Private Vulnerability Reporting](https://github.com/jackhumphries/airport-utility/security/advisories/new).
+[GitHub Private Vulnerability Reporting](https://github.com/pepperstm/airport-utility/security/advisories/new).
 Do not open a public issue for an undisclosed vulnerability.
 
 Include as much of the following as possible:
@@ -32,7 +33,7 @@ Relevant reports include vulnerabilities introduced by this repository, such as
 credential exposure, command injection, unsafe device operations, firmware
 handling flaws, or authentication and protocol-handling weaknesses. Ordinary
 bugs, unsupported-device behavior, and feature requests should instead use the
-[public issue tracker](https://github.com/jackhumphries/airport-utility/issues).
+[public issue tracker](https://github.com/pepperstm/airport-utility/issues).
 Issues that exist solely in Apple hardware or firmware and are not caused by
 this project are outside the scope of this policy and should be reported to the
 appropriate vendor.

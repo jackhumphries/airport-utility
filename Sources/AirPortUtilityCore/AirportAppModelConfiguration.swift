@@ -74,6 +74,11 @@ extension AirportAppModel {
     isShowingConfigureOther = true
   }
 
+  public func showSites() {
+    prepareAuxiliarySheetPresentation()
+    isShowingSites = true
+  }
+
   func prepareAuxiliarySheetPresentation() {
     isEditingDevice = false
     isDevicePopoverPresented = false
@@ -87,6 +92,7 @@ extension AirportAppModel {
     isShowingPasswords = false
     isShowingPreferences = false
     isShowingConfigureOther = false
+    isShowingSites = false
   }
 
   public var defaultConfigurationFileName: String {

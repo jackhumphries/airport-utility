@@ -176,9 +176,9 @@ extension AirportAppModel {
         timeout: 300
       ) { chunk in
         guard chunk.stream == .stdout else { return }
-        Task { @MainActor [weak self] in
-          self?.appendFirmwareUploadProgressOutput(chunk.text)
-        }
+          Task { @MainActor in
+            self.appendFirmwareUploadProgressOutput(chunk.text)
+          }
       }
       guard self.connectionStillMatches(requestHost) else {
         self.ignoreStaleOperation("Ignored firmware install result for stale host \(requestHost).")
@@ -516,6 +516,7 @@ extension AirportAppModel {
       applyInstalledFirmwareImage(image, reinstalled: wasReinstall, suffix: initialSuffix)
       clearBaseStationUpdate(requestHost: requestHost)
       resetFirmwareTransferProgress()
+      clearRecoveryGuidance(forHost: requestHost)
       return
     }
     do {
@@ -537,11 +538,22 @@ extension AirportAppModel {
       applyInstalledFirmwareImage(image, reinstalled: wasReinstall, suffix: completionSuffix)
       clearBaseStationUpdate(requestHost: requestHost)
       resetFirmwareTransferProgress()
+      clearRecoveryGuidance(forHost: requestHost)
     } catch {
       guard connectionStillMatches(requestHost) else { return }
       let errorDescription = Self.userFacingErrorDescription(error.localizedDescription)
       status = errorDescription
       appendLog("Firmware verification failed: \(errorDescription)")
+      // postApplyDeviceNameForStatus reflects whatever's currently selected,
+      // not necessarily this record's original device, if the user switches
+      // base stations mid-flight - a pre-existing characteristic of that
+      // property, not new here.
+      recoveryGuidance = RecoveryGuidance(
+        reason: .firmwareVerificationFailed,
+        host: AirportConnection.normalizedHost(requestHost),
+        deviceName: postApplyDeviceNameForStatus,
+        date: Date(),
+        detail: errorDescription)
     }
   }
 

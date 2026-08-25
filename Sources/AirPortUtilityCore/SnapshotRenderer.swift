@@ -42,6 +42,12 @@ public enum AirPortSnapshotRenderer {
     try renderDevicePopover(model: model, to: popoverURL)
     urls.append(popoverURL)
     model.isDevicePopoverPresented = false
+
+    model.wirelessClients = AirportMockBackend.sampleWirelessClients
+    model.hasLoadedWirelessClients = true
+    let dashboardURL = outputDirectory.appendingPathComponent("dashboard.png")
+    try renderDashboard(model: model, to: dashboardURL)
+    urls.append(dashboardURL)
     model.setup = AirPortSetupState(
       step: .recommendation, mode: .create, deviceName: "new airport",
       networkName: "new network", password: "password", verifyPassword: "password")
@@ -81,6 +87,16 @@ public enum AirPortSnapshotRenderer {
     let size = AirPortMainWindowMetrics.fullSnapshotSize
     let root = SnapshotWindow(controlState: .normal) {
       TopologyView()
+        .environmentObject(model)
+    }
+    try render(root: root, size: size, to: url)
+  }
+
+  @MainActor
+  private static func renderDashboard(model: AirportAppModel, to url: URL) throws {
+    let size = AirPortMainWindowMetrics.fullSnapshotSize
+    let root = SnapshotWindow(controlState: .normal) {
+      DashboardPane()
         .environmentObject(model)
     }
     try render(root: root, size: size, to: url)
@@ -304,6 +320,8 @@ public enum AirPortSnapshotRenderer {
       AdvancedPane()
     case .firmware:
       FirmwarePane()
+    case .diagnostics:
+        DiagnosticsPane()
     }
   }
 

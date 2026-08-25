@@ -47,6 +47,30 @@ struct ProfileReader: Sendable {
     value(at: path) != nil
   }
 
+  func diagnosticDescription(_ path: String) -> String? {
+    guard let value = value(at: path) else { return nil }
+    return Self.diagnosticDescription(value)
+  }
+
+  private static func diagnosticDescription(_ value: JSONValue) -> String {
+    switch value {
+    case .null:
+      return "null"
+    case .bool(let value):
+      return String(value)
+    case .number(let value):
+      return value.rounded() == value ? String(format: "%.0f", value) : String(value)
+    case .string(let value):
+      return value
+    case .array(let values):
+      return "[\(values.map(diagnosticDescription).joined(separator: ", "))]"
+    case .object(let object):
+      return "{" + object.keys.sorted().map {
+        "\($0): \(diagnosticDescription(object[$0]!))"
+      }.joined(separator: ", ") + "}"
+    }
+  }
+
   func hasUsableSetting(at path: String) -> Bool {
     guard let value = value(at: path) else { return false }
     return Self.hasUsableSetting(value)

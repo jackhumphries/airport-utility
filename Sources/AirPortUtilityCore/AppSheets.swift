@@ -82,6 +82,28 @@ struct PreferencesSheet: View {
       .font(.system(size: 13))
       .accessibilityIdentifier("preferences.show.connection.details")
 
+      Divider()
+
+      VStack(alignment: .leading, spacing: 10) {
+        Text("Health Notifications")
+          .font(.system(size: 13, weight: .semibold))
+        notificationToggle(
+          "Disk SMART status needs attention", keyPath: \.smartStatus,
+          identifier: "preferences.notifications.smart")
+        notificationToggle(
+          "Time Capsule storage is low", keyPath: \.lowDiskSpace,
+          identifier: "preferences.notifications.capacity")
+        notificationToggle(
+          "SMB file sharing becomes unavailable", keyPath: \.smbOutage,
+          identifier: "preferences.notifications.smb")
+        notificationToggle(
+          "Time Machine backups become overdue or stale", keyPath: \.staleBackups,
+          identifier: "preferences.notifications.backups")
+        Text("macOS will ask for notification permission when you enable an alert.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
       HStack {
         Spacer()
         Button("OK") {
@@ -93,7 +115,22 @@ struct PreferencesSheet: View {
       }
     }
     .padding(EdgeInsets(top: 18, leading: 20, bottom: 16, trailing: 20))
-    .frame(width: 430, alignment: .leading)
+    .frame(width: 470, alignment: .leading)
+  }
+
+  private func notificationToggle(
+    _ title: String,
+    keyPath: WritableKeyPath<HealthNotificationPreferences, Bool>,
+    identifier: String
+  ) -> some View {
+    Toggle(
+      title,
+      isOn: Binding(
+        get: { model.healthNotificationPreferences[keyPath: keyPath] },
+        set: { model.updateHealthNotificationPreference(keyPath, enabled: $0) }))
+      .toggleStyle(.checkbox)
+      .font(.system(size: 13))
+      .accessibilityIdentifier(identifier)
   }
 }
 

@@ -3,6 +3,66 @@ import XCTest
 @testable import AirPortUtilityCore
 
 final class DiskInventoryParserTests: XCTestCase {
+  func testDiskInventoryDiagnosticsExposeFieldStructureWithoutUUIDValue() {
+    let json = """
+      {"settings":{"MaSt":{"decoded":{"disks":[{"partitions":[{
+        "deviceName":"dk2","name":"Data","uuid":"secret-uuid",
+        "capacityBlocks":123,"availableBlocks":45
+      }]}]}}}}
+      """
+
+    let summary = DiskInventoryParser.diagnosticFieldSummary(stdout: json)
+
+    XCTAssertTrue(summary.contains("diskInventory.decoded.disks[0].partitions[0].capacityBlocks=<number>"))
+    XCTAssertTrue(summary.contains("diskInventory.decoded.disks[0].partitions[0].availableBlocks=<number>"))
+    XCTAssertTrue(summary.contains("diskInventory.decoded.disks[0].partitions[0].uuid=<string>"))
+    XCTAssertFalse(summary.contains("secret-uuid"))
+  }
+
+  func testParsedDiskDiagnosticsReportMissingCapacity() {
+    let record = DiskRecord(
+      deviceName: "dk2", name: "Data", format: "HFS", uuid: "secret-uuid",
+      size: nil, sizeFree: nil, builtIn: true)
+
+    let summary = DiskInventoryParser.diagnosticRecordSummary([record])
+
+    XCTAssertTrue(summary.contains("device=dk2"))
+    XCTAssertTrue(summary.contains("name=Data"))
+    XCTAssertTrue(summary.contains("size=<missing>"))
+    XCTAssertTrue(summary.contains("sizeFree=<missing>"))
+    XCTAssertFalse(summary.contains("secret-uuid"))
+  }
+
+  func testParsesTypedDecimalDiskSizesSeenOnModernTimeCapsule() {
+    let json = """
+      {"decoded":[{"deviceName":"wd0","builtin":true,"partitions":[{
+        "deviceName":"dk2","name":"Data","format":"hfs",
+        "size":{"type":"uint64","decimal":"953674","width":8},
+        "sizeFree":{"type":"uint64","decimal":"474783","width":8}
+      }]}]}
+      """
+
+    let records = DiskInventoryParser.parse(stdout: json)
+
+    XCTAssertEqual(records.first?.size, 999_999_668_224)
+    XCTAssertEqual(records.first?.sizeFree, 497_846_059_008)
+  }
+
+  func testDiskMetricDiagnosticsIncludeObservedNumericAndSmartValues() {
+    let json = """
+      {"decoded":[{"blockSize":{"decimal":"512"},"smartStatus":"verified",
+        "partitions":[{"size":{"decimal":"953674"},"sizeFree":{"decimal":"474783"}}]
+      }]}
+      """
+
+    let summary = DiskInventoryParser.diagnosticMetricSummary(stdout: json)
+
+    XCTAssertTrue(summary.contains("blockSize.decimal=512"))
+    XCTAssertTrue(summary.contains("smartStatus=verified"))
+    XCTAssertTrue(summary.contains("partitions[0].size.decimal=953674"))
+    XCTAssertTrue(summary.contains("partitions[0].sizeFree.decimal=474783"))
+    XCTAssertEqual(DiskInventoryParser.smartStatuses(stdout: json), ["verified"])
+  }
   func testDiskInventoryEmptyStateDoesNotExposeMaStRefreshInstruction() {
     XCTAssertEqual(
       DiskInventoryList.emptyStateText(didLoadInventory: false, isLoading: true),

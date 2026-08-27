@@ -42,7 +42,7 @@ enum DiskInventoryMessage {
 
   static func userFacingErrorDescription(_ description: String) -> String {
     if containsPendingPlaceholder(description) {
-      return "Disk information is not available yet."
+      return localized("Disk information is not available yet.")
     }
     if containsSettingReference(description) {
       return friendlyErrorDescription(description)
@@ -52,7 +52,7 @@ enum DiskInventoryMessage {
 
   static func userFacingCommandOutput(_ output: String) -> String {
     if isOnlyPendingOutput(output) || looksLikePendingFailure(output) {
-      return "Disk information is not available yet."
+      return localized("Disk information is not available yet.")
     }
     let output = removingPendingLines(from: output)
     if containsSettingReference(output) {

@@ -324,7 +324,7 @@ extension AirportAppModel {
 
   private func restoreConnectionStatusAfterRestart() {
     if hasLoadedSettings, liveCredentialsAvailable {
-      status = "Connected to \(connection.host)"
+      status = localizedFormat("Connected to %@", connection.host)
     } else {
       updateIdleConnectionStatus()
     }

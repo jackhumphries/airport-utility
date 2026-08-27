@@ -36,7 +36,7 @@ enum AirportCommandError: LocalizedError, Sendable {
       return "Command failed with exit \(result.exitCode)"
     }
     if DiskInventoryMessage.containsPendingPlaceholder(output) {
-      return "Disk information is not available yet."
+      return localized("Disk information is not available yet.")
     }
     let lowercased = output.lowercased()
     if lowercased.contains("nodename nor servname")
@@ -50,7 +50,7 @@ enum AirportCommandError: LocalizedError, Sendable {
           "Could not find \(host). Check that the Time Capsule is on this network, or enter its IP address instead of the .local name."
       }
       return
-        "Could not find the Time Capsule. Check that it is on this network, or enter its IP address instead of the .local name."
+        localized("Could not find the Time Capsule. Check that it is on this network, or enter its IP address instead of the .local name.")
     }
     return output
   }

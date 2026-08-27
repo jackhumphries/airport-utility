@@ -4,18 +4,18 @@ import Foundation
 extension AirportAppModel {
   func refreshFirmwareImages() {
     guard supportsPane(.firmware) else {
-      status = "This base station does not support firmware updates."
+      status = localized("This base station does not support firmware updates.")
       return
     }
     guard !isBusy else { return }
     let productID = firmware.productID.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !productID.isEmpty else {
-      status = "The base station product ID is not available."
+      status = localized("The base station product ID is not available.")
       return
     }
     let requestHost = AirportConnection.normalizedHost(connection.host)
     firmware.isLoading = true
-    runTask("Loading firmware list", requestHost: requestHost) {
+    runTask(localized("Loading firmware list"), requestHost: requestHost) {
       defer {
         self.firmware.isLoading = false
       }
@@ -54,7 +54,7 @@ extension AirportAppModel {
 
   func previewSelectedFirmwareInstall() {
     guard supportsPane(.firmware) else {
-      status = "This base station does not support firmware updates."
+      status = localized("This base station does not support firmware updates.")
       clearPreviewAfterValidationFailure()
       return
     }
@@ -63,19 +63,19 @@ extension AirportAppModel {
     }
     guard let image = firmware.selectedImage else {
       preview = nil
-      status = "No firmware image is selected."
+      status = localized("No firmware image is selected.")
       return
     }
     let args = AirportCommand.installFirmware(
       connection: connection,
       firmwarePath: image.location.absoluteString,
       dryRun: true)
-    dryRun(title: "Firmware", args: args, connection: connection)
+    dryRun(title: localized("Firmware"), args: args, connection: connection)
   }
 
   func installSelectedFirmware() {
     guard supportsPane(.firmware) else {
-      status = "This base station does not support firmware updates."
+      status = localized("This base station does not support firmware updates.")
       clearPreviewAfterValidationFailure()
       return
     }
@@ -84,7 +84,7 @@ extension AirportAppModel {
     }
     guard let image = firmware.selectedImage else {
       preview = nil
-      status = "No firmware image is selected."
+      status = localized("No firmware image is selected.")
       return
     }
     guard mockMode || liveCredentialsAvailable else {
@@ -118,21 +118,21 @@ extension AirportAppModel {
           phase: .download,
           completed: 1,
           total: 1,
-          detail: "Using bundled mock firmware.")
+          detail: localized("Using bundled mock firmware."))
       } else if image.isLocalFile {
         firmwareSource = image.location.path
         self.updateFirmwareTransferProgress(
           phase: .download,
           completed: 1,
           total: 1,
-          detail: "Using selected firmware file.")
+          detail: localized("Using selected firmware file."))
       } else {
         self.firmware.installStatus = "Downloading firmware \(image.version)."
         self.updateFirmwareTransferProgress(
           phase: .download,
           completed: 0,
           total: Double(max(image.sizeInBytes, 1)),
-          detail: "Starting download from Apple.")
+          detail: localized("Starting download from Apple."))
         let localURL = try await self.downloadFirmwareImage(image)
         firmwareSource = localURL.path
       }
@@ -150,8 +150,8 @@ extension AirportAppModel {
           phase: .upload,
           completed: 1,
           total: 1,
-          detail: "Mock firmware uploaded.")
-        self.firmware.installStatus = "Mock firmware upload accepted. Restart requested."
+          detail: localized("Mock firmware uploaded."))
+        self.firmware.installStatus = localized("Mock firmware upload accepted. Restart requested.")
         self.firmwareUploadRestartStarted(
           image: image,
           connection: connection,
@@ -168,7 +168,7 @@ extension AirportAppModel {
         phase: .upload,
         completed: 0,
         total: 1,
-        detail: "Starting upload to AirPort.")
+        detail: localized("Starting upload to AirPort."))
       let result = try await self.runner.run(
         script: AirportCommand.writeScript,
         arguments: args,
@@ -203,12 +203,12 @@ extension AirportAppModel {
           self.appendLog("Firmware upload: \(summary) Host: \(uploadResult.uploadHost).")
         }
       } else {
-        self.firmware.installStatus = "Firmware upload accepted. Waiting for restart."
+        self.firmware.installStatus = localized("Firmware upload accepted. Waiting for restart.")
         self.updateFirmwareTransferProgress(
           phase: .restart,
           completed: 1,
           total: 1,
-          detail: "Restart command sent.")
+          detail: localized("Restart command sent."))
       }
       let suffix: String
       if let uploadResult, uploadResult.progressComplete == true {
@@ -301,7 +301,7 @@ extension AirportAppModel {
     if mockMode {
       loadMockFirmwareImagesIfNeeded(force: true)
       if updatesStatus {
-        status = "Firmware list loaded. Mock mode."
+        status = localized("Firmware list loaded. Mock mode.")
       }
       return
     }
@@ -316,8 +316,8 @@ extension AirportAppModel {
     guard updatesStatus else { return }
     status =
       images.isEmpty
-      ? "No Apple firmware images are listed for this base station."
-      : "Firmware list loaded."
+      ? localized("No Apple firmware images are listed for this base station.")
+      : localized("Firmware list loaded.")
   }
 
   private func downloadFirmwareImage(_ image: FirmwareImage) async throws -> URL {
@@ -336,7 +336,7 @@ extension AirportAppModel {
       in: .whitespacesAndNewlines)
     if !name.isEmpty { return name }
     let fallback = url.lastPathComponent.trimmingCharacters(in: .whitespacesAndNewlines)
-    return fallback.isEmpty ? "Chosen Firmware" : fallback
+    return fallback.isEmpty ? localized("Chosen Firmware") : fallback
   }
 
   private static func firmwareSourceIdentifier(for url: URL) -> String {
@@ -464,9 +464,9 @@ extension AirportAppModel {
       phase: .restart,
       completed: 1,
       total: 1,
-      detail: "Restart command sent.")
+      detail: localized("Restart command sent."))
     status = "Firmware uploaded. \(image.version) will install after restart."
-    firmware.installStatus = "Firmware uploaded. Restart requested."
+    firmware.installStatus = localized("Firmware uploaded. Restart requested.")
     preview = nil
     beginBaseStationUpdate(requestHost: requestHost)
     scheduleFirmwareCompletionMonitor(

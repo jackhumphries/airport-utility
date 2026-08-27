@@ -13,7 +13,7 @@ struct InternetPane: View {
   var body: some View {
     PaneBox {
       VStack(alignment: .leading, spacing: 12) {
-        InternetFormRow(title: "Connect Using:") {
+        InternetFormRow(title: localized("Connect Using:")) {
           Picker("", selection: $model.internet.connectUsing) {
             ForEach(model.internetConnectUsingOptions) { value in
               Text(value.label).tag(value)
@@ -25,26 +25,26 @@ struct InternetPane: View {
           .onChange(of: model.internet.connectUsing) { model.handleInternetConnectUsingChanged($0) }
         }
         if model.internet.connectUsing == .pppoe {
-          InternetFormRow(title: "Account Name:") {
+          InternetFormRow(title: localized("Account Name:")) {
             AirPortTextField(
               text: $model.internet.pppoeAccount,
               identifier: "internet.pppoe.account")
           }
           .internetEditableRow()
-          InternetFormRow(title: "Password:") {
+          InternetFormRow(title: localized("Password:")) {
             AirPortSecureField(
               text: $model.internet.pppoePassword,
               identifier: "internet.pppoe.password")
               .frame(height: 24)
           }
           .internetEditableRow()
-          InternetFormRow(title: "Service Name:") {
+          InternetFormRow(title: localized("Service Name:")) {
             AirPortTextField(
               text: $model.internet.pppoeService,
               identifier: "internet.pppoe.service")
           }
           .internetEditableRow()
-          InternetFormRow(title: "Connection:") {
+          InternetFormRow(title: localized("Connection:")) {
             Picker("", selection: $model.internet.pppoeConnection) {
               ForEach(PPPoEConnectionOption.allCases) { option in
                 Text(option.label).tag(option.value)
@@ -58,33 +58,33 @@ struct InternetPane: View {
           .padding(.bottom, 10)
         }
         if model.internet.connectUsing == .modem && model.showsModemControls {
-          InternetFormRow(title: "Phone Number:") {
+          InternetFormRow(title: localized("Phone Number:")) {
             AirPortTextField(
               text: $model.internet.modemPhoneNumber,
               identifier: "internet.modem.phone.number")
           }
           .internetEditableRow()
-          InternetFormRow(title: "Alternate Number:") {
+          InternetFormRow(title: localized("Alternate Number:")) {
             AirPortTextField(
               text: $model.internet.modemAlternateNumber,
               identifier: "internet.modem.alternate.number")
           }
           .internetEditableRow()
           if model.showsExtendedModemControls {
-            InternetFormRow(title: "Account Name:") {
+            InternetFormRow(title: localized("Account Name:")) {
               AirPortTextField(
                 text: $model.internet.modemAccount,
                 identifier: "internet.modem.account")
             }
             .internetEditableRow()
-            InternetFormRow(title: "Password:") {
+            InternetFormRow(title: localized("Password:")) {
               AirPortSecureField(
                 text: $model.internet.modemPassword,
                 identifier: "internet.modem.password")
                 .frame(height: 24)
             }
             .internetEditableRow()
-            InternetFormRow(title: "Verify Password:") {
+            InternetFormRow(title: localized("Verify Password:")) {
               AirPortSecureField(
                 text: $model.internet.modemVerifyPassword,
                 identifier: "internet.modem.verify.password")
@@ -93,7 +93,7 @@ struct InternetPane: View {
             .internetEditableRow()
           }
           InternetOptionsCheckbox(
-            "Use AOL",
+            localized("Use AOL"),
             isOn: $model.internet.modemUseAOL,
             identifier: "internet.modem.use.aol")
             .frame(width: AirPortLayout.formControlWidth, alignment: .leading)
@@ -102,7 +102,7 @@ struct InternetPane: View {
             HStack {
               Spacer().frame(width: AirPortLayout.formControlLeading)
               InternetPaneButton(
-                "Modem Options...", width: 147,
+                localized("Modem Options..."), width: 147,
                 identifier: "internet.modem.options.open"
               ) { showModemOptions = true }
                 .frame(width: 147, height: 22)
@@ -111,7 +111,7 @@ struct InternetPane: View {
           }
         }
         if model.internet.connectUsing != .modem {
-        InternetFormRow(title: "IPv4 Address:") {
+        InternetFormRow(title: localized("IPv4 Address:")) {
           if model.internet.connectUsing == .static {
             AirPortTextField(
               text: $model.internet.ipv4Address,
@@ -122,18 +122,18 @@ struct InternetPane: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
               if model.internet.connectUsing == .dhcp {
                 InternetPaneButton(
-                  "Renew DHCP Lease", width: 148,
+                  localized("Renew DHCP Lease"), width: 148,
                   identifier: "internet.renew.dhcp.lease"
                 ) {
                   model.renewDHCPLease()
                 }
-                .frame(width: 148, height: 22)
+                .frame(minWidth: 148).frame(height: 22)
               }
             }
           }
         }
         .internetEditableRow(enabled: model.internet.connectUsing == .static)
-        InternetFormRow(title: "Subnet Mask:") {
+        InternetFormRow(title: localized("Subnet Mask:")) {
           if model.internet.connectUsing == .static {
             AirPortTextField(
               text: $model.internet.subnetMask,
@@ -144,7 +144,7 @@ struct InternetPane: View {
           }
         }
         .internetEditableRow(enabled: model.internet.connectUsing == .static)
-        InternetFormRow(title: "Router Address:") {
+        InternetFormRow(title: localized("Router Address:")) {
           if model.internet.connectUsing == .static {
             AirPortTextField(
               text: $model.internet.routerAddress,
@@ -155,7 +155,7 @@ struct InternetPane: View {
           }
         }
         .internetEditableRow(enabled: model.internet.connectUsing == .static)
-        InternetFormRow(title: "DNS Servers:") {
+        InternetFormRow(title: localized("DNS Servers:")) {
           DNSServerFields(
             text: $model.internet.dnsServers,
             placeholderText: model.internet.connectUsing == .dhcp
@@ -165,7 +165,7 @@ struct InternetPane: View {
           )
         }
         if model.showsIPv6InternetControls {
-          InternetFormRow(title: "IPv6 DNS Servers:") {
+          InternetFormRow(title: localized("IPv6 DNS Servers:")) {
             DNSServerFields(
               text: $model.internet.ipv6DNSServers,
               placeholderText: model.internet.connectUsing == .dhcp
@@ -174,14 +174,14 @@ struct InternetPane: View {
             )
           }
         }
-        InternetFormRow(title: "Domain Name:") {
+        InternetFormRow(title: localized("Domain Name:")) {
           AirPortTextField(
             text: $model.internet.domainName,
             identifier: "internet.domain.name")
         }
         .internetEditableRow()
         if model.showsIPv6InternetControls {
-          InternetFormRow(title: "IPv6 Address:") {
+          InternetFormRow(title: localized("IPv6 Address:")) {
             Text(model.internet.ipv6Address)
               .frame(maxWidth: .infinity, alignment: .leading)
           }
@@ -190,7 +190,7 @@ struct InternetPane: View {
           HStack {
             Spacer().frame(width: AirPortLayout.formControlLeading)
             InternetPaneButton(
-              "Internet Options...", width: 147,
+              localized("Internet Options..."), width: 147,
               identifier: "internet.options.open"
             ) { showOptions = true }
               .frame(width: 147, height: 22)
@@ -236,7 +236,13 @@ private struct InternetPaneButton: NSViewRepresentable {
     button.setButtonType(.momentaryPushIn)
     button.alignment = .center
     button.translatesAutoresizingMaskIntoConstraints = false
-    button.widthAnchor.constraint(equalToConstant: width).isActive = true
+    // Exact width, but never narrower than the label needs. The constants were
+    // measured against English and truncate longer translations; a plain
+    // greaterThanOrEqual constraint instead lets the button expand to fill,
+    // which changes the English layout.
+    button.widthAnchor.constraint(
+      equalToConstant: max(width, button.intrinsicContentSize.width)
+    ).isActive = true
     button.heightAnchor.constraint(equalToConstant: 22).isActive = true
     button.setAccessibilityTitle(title)
     button.identifier = identifier.map { NSUserInterfaceItemIdentifier($0) }

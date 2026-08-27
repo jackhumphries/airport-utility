@@ -15,7 +15,7 @@ struct NetworkOptionsSheet: View {
 
   var body: some View {
     ZStack(alignment: .topLeading) {
-      Text("Network Options")
+      Text(localized("Network Options"))
         .font(.system(size: 13, weight: .semibold))
         .frame(width: 150, height: 20, alignment: .leading)
         .offset(x: 18, y: 10)
@@ -23,7 +23,7 @@ struct NetworkOptionsSheet: View {
         .frame(width: 471)
         .offset(x: 20, y: 42)
 
-      optionLabel("DHCP Lease:", width: 190)
+      optionLabel(localized("DHCP Lease:"), width: 190)
         .offset(x: 19, y: 50)
       NetworkOptionsTextField(
         text: $draft.dhcpLease,
@@ -42,7 +42,7 @@ struct NetworkOptionsSheet: View {
       .frame(width: 143, height: 23)
       .offset(x: 347, y: 49)
 
-      optionLabel("IPv4 DHCP Range:", width: 190)
+      optionLabel(localized("IPv4 DHCP Range:"), width: 190)
         .offset(x: 19, y: 83)
       Picker("", selection: $dhcpRangePrefix) {
         Text("10.0").tag("10.0")
@@ -83,7 +83,7 @@ struct NetworkOptionsSheet: View {
         .offset(x: 448, y: 83)
 
       if model.capabilities.supportsLegacyDHCPOptions {
-        optionLabel("DHCP Message:", width: 190)
+        optionLabel(localized("DHCP Message:"), width: 190)
           .offset(x: 19, y: 116)
         NetworkOptionsTextField(
           text: $legacyDraft.message,
@@ -91,7 +91,7 @@ struct NetworkOptionsSheet: View {
           .frame(width: 279)
           .offset(x: 211, y: 115)
 
-        optionLabel("LDAP Server:", width: 190)
+        optionLabel(localized("LDAP Server:"), width: 190)
           .offset(x: 19, y: 147)
         NetworkOptionsTextField(
           text: $legacyDraft.ldapServer,
@@ -101,7 +101,7 @@ struct NetworkOptionsSheet: View {
       }
 
       NetworkOptionsCheckbox(
-        "Enable NAT Port Mapping Protocol",
+        localized("Enable NAT Port Mapping Protocol"),
         isOn: $draft.natPMP,
         identifier: "network.options.nat.pmp"
       )
@@ -109,7 +109,7 @@ struct NetworkOptionsSheet: View {
       .offset(x: 212, y: 149 + legacyVerticalOffset)
 
       NetworkOptionsCheckbox(
-        "Enable default host at:",
+        localized("Enable default host at:"),
         isOn: $defaultHostEnabled,
         identifier: "network.options.default.host.enabled")
         .frame(width: 164, height: 18, alignment: .leading)
@@ -122,11 +122,16 @@ struct NetworkOptionsSheet: View {
         .opacity(defaultHostEnabled ? 1 : 0.58)
         .offset(x: 211, y: 172 + legacyVerticalOffset)
 
-      NetworkOptionsButton("Cancel", identifier: "network.options.cancel") { dismiss() }
+      // Right-anchored rather than fixed x offsets: a wider translated label
+      // ("Abbrechen") would otherwise grow rightward into the Save button.
+      // The trailing edge and 12pt gap reproduce the English layout exactly.
+      HStack(spacing: 12) {
+        NetworkOptionsButton(localized("Cancel"), identifier: "network.options.cancel") {
+          dismiss()
+        }
         .frame(width: 70, height: 22)
-        .offset(x: 339, y: 220 + legacyVerticalOffset)
-      NetworkOptionsButton(
-        "Save", isDefault: true, isEnabled: canSave,
+        NetworkOptionsButton(
+        localized("Save"), isDefault: true, isEnabled: canSave,
         identifier: "network.options.save"
       ) {
         guard applyDHCPRange() else { return }
@@ -139,8 +144,10 @@ struct NetworkOptionsSheet: View {
         }
         dismiss()
       }
-      .frame(width: 70, height: 22)
-      .offset(x: 421, y: 220 + legacyVerticalOffset)
+        .frame(width: 70, height: 22)
+      }
+      .frame(width: 491, alignment: .trailing)
+      .offset(x: 0, y: 220 + legacyVerticalOffset)
     }
     .onAppear {
       if !loaded {

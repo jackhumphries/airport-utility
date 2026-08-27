@@ -40,15 +40,15 @@ extension AirportAppModel {
     clearLoadedDeviceDetails(name: "")
 
     guard !mockMode else {
-      appendLog("Mock network scan completed.")
+      appendLog(localized("Mock network scan completed."))
       return
     }
     let browser = bonjourBrowser ?? makeBonjourBrowser()
     bonjourBrowser = browser
     hasStartedBonjourDiscovery = true
     browser.start()
-    status = "Scanning for AirPort base stations…"
-    appendLog("Rescanning the network for AirPort base stations.")
+    status = localized("Scanning for AirPort base stations…")
+    appendLog(localized("Rescanning the network for AirPort base stations."))
   }
 
   func updateDiscoveredDevices(_ devices: [AirportDiscoveredDevice]) {
@@ -251,18 +251,18 @@ extension AirportAppModel {
   }
 
   var internetTopologyAccessibilityTitle: String {
-    isHostInternetConnected ? "Internet working normally" : "Internet inactive"
+    isHostInternetConnected ? localized("Internet working normally") : localized("Internet inactive")
   }
 
   func deviceStatusText(for device: AirportDiscoveredDevice? = nil) -> String {
     if let device, isTopologyDeviceRestoring(device) {
-      return "Restoring"
+      return localized("Restoring")
     }
     if let device, isTopologyDeviceUpdating(device) {
-      return "Restarting"
+      return localized("Restarting")
     }
     if let device, device.requiresSetup {
-      return "New AirPort base station"
+      return localized("New AirPort base station")
     }
     if let device {
       let status = device.statusText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -274,7 +274,7 @@ extension AirportAppModel {
       }
     }
     let status = baseStation.statusText.trimmingCharacters(in: .whitespacesAndNewlines)
-    return status.isEmpty ? "Working normally" : status
+    return status.isEmpty ? localized("Working normally") : status
   }
 
   func selectedDeviceStatusText() -> String {
@@ -314,7 +314,7 @@ extension AirportAppModel {
       return ""
     }
     guard let image = availableAppleFirmwareUpdateImage(for: device, snapshot: snapshot) else {
-      return "Firmware update available"
+      return localized("Firmware update available")
     }
     return "Firmware \(image.version) available"
   }

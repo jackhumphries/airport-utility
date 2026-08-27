@@ -12,17 +12,17 @@ struct EraseDiskSheet: View {
       diskIcon
         .offset(x: 14, y: 19)
 
-      Text("Are you sure you want to erase the AirPort Time\nCapsule disk? ")
+      Text(localized("Are you sure you want to erase the AirPort Time Capsule disk?"))
         .font(.system(size: 13, weight: .semibold))
         .frame(width: 401, height: 36, alignment: .topLeading)
         .offset(x: 101, y: 19)
 
-      Text("Erasing the AirPort Time Capsule disk deletes all files from the disk.")
+      Text(localized("Erasing the AirPort Time Capsule disk deletes all files from the disk."))
         .font(.system(size: 13))
-        .frame(width: 430, height: 31, alignment: .topLeading)
+        .frame(width: 430, height: 36, alignment: .topLeading)
         .offset(x: 101, y: 64)
 
-      sheetLabel("Name:")
+      sheetLabel(localized("Name:"))
         .offset(x: 126, y: 101)
       AirPortTextField(
         text: $diskName,
@@ -30,9 +30,9 @@ struct EraseDiskSheet: View {
         .frame(width: 262, height: 24)
         .offset(x: 239, y: 99)
 
-      sheetLabel("Security Method:")
+      sheetLabel(localized("Security Method:"))
         .offset(x: 126, y: 127)
-      Picker("Security Method", selection: $method) {
+      Picker(localized("Security Method"), selection: $method) {
         ForEach(EraseMethod.allCases) { method in
           Text(method.eraseSheetLabel).tag(method)
         }
@@ -50,16 +50,21 @@ struct EraseDiskSheet: View {
         .disabled(true)
         .offset(x: 101, y: 166)
 
-      DiskSheetButton(
-        "Cancel", width: 70, isDefault: true,
-        identifier: "erase.disk.cancel"
-      ) { dismiss() }
-        .offset(x: 356, y: 245)
-      DiskSheetButton("Erase", width: 62, identifier: "erase.disk.confirm") {
-        model.applyErase(method: method, volumeName: diskName)
-        dismiss()
+      // Right-anchored: a wider translated label would otherwise grow into the
+      // neighbouring button. Trailing edge (500) and 12pt gap match the English
+      // layout exactly (Cancel 356-426, Erase 438-500).
+      HStack(spacing: 12) {
+        DiskSheetButton(
+          localized("Cancel"), width: 70, isDefault: true,
+          identifier: "erase.disk.cancel"
+        ) { dismiss() }
+        DiskSheetButton(localized("Erase"), width: 62, identifier: "erase.disk.confirm") {
+          model.applyErase(method: method, volumeName: diskName)
+          dismiss()
+        }
       }
-      .offset(x: 438, y: 245)
+      .frame(width: 500, alignment: .trailing)
+      .offset(x: 0, y: 245)
     }
     .onAppear {
       if diskName.isEmpty {
@@ -73,7 +78,7 @@ struct EraseDiskSheet: View {
   nonisolated static func initialDiskName(disks: DisksState) -> String {
     DisksPane.selectedDisk(in: disks)?.name
       ?? disks.inventory.first?.name
-      ?? "AirPort Time Capsule Disk"
+      ?? localized("AirPort Time Capsule Disk")
   }
 }
 
@@ -87,22 +92,24 @@ struct ArchiveDiskSheet: View {
         .offset(x: 14, y: 19)
 
       Text(
-        "Are you sure you want to archive the AirPort Time Capsule\ndisk to a disk connected using USB? "
+        localized(
+          "Are you sure you want to archive the AirPort Time Capsule disk to a disk connected using USB?"
+        )
       )
       .font(.system(size: 13, weight: .semibold))
       .frame(width: 402, height: 44, alignment: .topLeading)
       .offset(x: 101, y: 19)
 
-      Text("Archive the AirPort Time Capsule disk to back up your data.")
+      Text(localized("Archive the AirPort Time Capsule disk to back up your data."))
         .font(.system(size: 13))
-        .frame(width: 401, height: 19, alignment: .topLeading)
+        .frame(width: 401, height: 36, alignment: .topLeading)
         .offset(x: 101, y: 69)
 
-      sheetLabel("Destination:")
+      sheetLabel(localized("Destination:"))
         .offset(x: 126, y: 108)
-      Picker("Destination", selection: .constant(destinationName ?? "No AirPort disks available")) {
-        Text(destinationName ?? "No AirPort disks available")
-          .tag(destinationName ?? "No AirPort disks available")
+      Picker(localized("Destination"), selection: .constant(destinationName ?? localized("No AirPort disks available"))) {
+        Text(destinationName ?? localized("No AirPort disks available"))
+          .tag(destinationName ?? localized("No AirPort disks available"))
       }
       .labelsHidden()
       .pickerStyle(.menu)
@@ -112,39 +119,44 @@ struct ArchiveDiskSheet: View {
       .offset(x: 239, y: 106)
 
       Text(
-        "Make sure the storage device has enough space for the archive before connecting it to the base station’s USB Port."
+        localized("Make sure the storage device has enough space for the archive before connecting it to the base station’s USB Port.")
       )
       .font(.system(size: 13))
       .foregroundStyle(Color.primary.opacity(0.82))
-      .frame(width: 402, height: 42, alignment: .topLeading)
+      .frame(width: 402, height: 52, alignment: .topLeading)
       .disabled(true)
       .offset(x: 101, y: 148)
 
-      if destinationName == nil {
-        DiskSheetButton(
-          "Cancel", width: 70, isDefault: true,
-          identifier: "archive.disk.cancel"
-        ) { dismiss() }
-          .offset(x: 343, y: 203)
-        DiskSheetButton(
-          "Archive", width: 75, isEnabled: false,
-          identifier: "archive.disk.confirm"
-        ) {}
-          .offset(x: 425, y: 203)
-      } else {
-        DiskSheetButton("Cancel", width: 70, identifier: "archive.disk.cancel") { dismiss() }
-          .offset(x: 343, y: 203)
-        DiskSheetButton(
-          "Archive", width: 75, isDefault: true,
-          identifier: "archive.disk.confirm"
-        ) {
-          if destinationName != nil {
-            model.applyArchive(name: "")
+      // Right-anchored: a wider translated label would otherwise grow into the
+      // neighbouring button. Trailing edge (500) and 12pt gap match the English
+      // layout exactly (Cancel 343-413, Archive 425-500).
+      HStack(spacing: 12) {
+        if destinationName == nil {
+          DiskSheetButton(
+            localized("Cancel"), width: 70, isDefault: true,
+            identifier: "archive.disk.cancel"
+          ) { dismiss() }
+          DiskSheetButton(
+            localized("Archive"), width: 75, isEnabled: false,
+            identifier: "archive.disk.confirm"
+          ) {}
+        } else {
+          DiskSheetButton(localized("Cancel"), width: 70, identifier: "archive.disk.cancel") {
             dismiss()
           }
+          DiskSheetButton(
+            localized("Archive"), width: 75, isDefault: true,
+            identifier: "archive.disk.confirm"
+          ) {
+            if destinationName != nil {
+              model.applyArchive(name: "")
+              dismiss()
+            }
+          }
         }
-        .offset(x: 425, y: 203)
       }
+      .frame(width: 500, alignment: .trailing)
+      .offset(x: 0, y: 203)
     }
     .frame(width: 521, height: 244, alignment: .topLeading)
     .background(AirPortSheetBackground())
@@ -188,7 +200,13 @@ private struct DiskSheetButton: NSViewRepresentable {
     button.setButtonType(.momentaryPushIn)
     button.alignment = .center
     button.translatesAutoresizingMaskIntoConstraints = false
-    button.widthAnchor.constraint(equalToConstant: width).isActive = true
+    // Exact width, but never narrower than the label needs. The constants were
+    // measured against English and truncate longer translations; a plain
+    // greaterThanOrEqual constraint instead lets the button expand to fill,
+    // which changes the English layout.
+    button.widthAnchor.constraint(
+      equalToConstant: max(width, button.intrinsicContentSize.width)
+    ).isActive = true
     button.heightAnchor.constraint(equalToConstant: 22).isActive = true
     configure(button)
     return button
@@ -245,13 +263,13 @@ extension EraseMethod {
   fileprivate var eraseSheetLabel: String {
     switch self {
     case .quick:
-      return "Quick Erase (non-secure)"
+      return localized("Quick Erase (non-secure)")
     case .zero:
-      return "Zero Out Data"
+      return localized("Zero Out Data")
     case .sevenPass:
-      return "7-Pass Erase"
+      return localized("7-Pass Erase")
     case .thirtyFivePass:
-      return "35-Pass Erase"
+      return localized("35-Pass Erase")
     }
   }
 
@@ -259,16 +277,16 @@ extension EraseMethod {
     switch self {
     case .quick:
       return
-        "Erases directory information so that data is no longer accessible. The data is left unchanged on disk until its disk space is required and it is written over. Data is potentially recoverable until then. This option is the quickest, but least secure."
+        localized("Erases directory information so that data is no longer accessible. The data is left unchanged on disk until its disk space is required and it is written over. Data is potentially recoverable until then. This option is the quickest, but least secure.")
     case .zero:
       return
-        "Writes zeros over all data on the disk. This option provides better security than a quick erase, but takes longer."
+        localized("Writes zeros over all data on the disk. This option provides better security than a quick erase, but takes longer.")
     case .sevenPass:
       return
-        "Writes over disk data seven times. This option is more secure and takes significantly longer."
+        localized("Writes over disk data seven times. This option is more secure and takes significantly longer.")
     case .thirtyFivePass:
       return
-        "Writes over disk data thirty-five times. This option is the most secure and takes the longest."
+        localized("Writes over disk data thirty-five times. This option is the most secure and takes the longest.")
     }
   }
 }

@@ -8,28 +8,28 @@ struct AirPlayPane: View {
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         BaseStationCheckbox(
-          "Enable AirPlay", isOn: $model.airPlay.enabled,
+          localized("Enable AirPlay"), isOn: $model.airPlay.enabled,
           identifier: "airplay.enabled")
       }
-      FormRow(title: "AirPlay Speaker Name:") {
+      FormRow(title: localized("AirPlay Speaker Name:")) {
         AirPortTextField(
           text: $model.airPlay.speakerName,
-          placeholder: "Speaker name",
+          placeholder: localized("Speaker name"),
           identifier: "airplay.speaker.name")
       }
       .disabled(!model.airPlay.enabled)
-      FormRow(title: "AirPlay Speaker Password:") {
+      FormRow(title: localized("AirPlay Speaker Password:")) {
         AirPortSecureField(
           text: $model.airPlay.speakerPassword,
-          placeholder: "Speaker password",
+          placeholder: localized("Speaker password"),
           identifier: "airplay.speaker.password")
           .frame(height: 24)
       }
       .disabled(!model.airPlay.enabled)
-      FormRow(title: "Verify Password:") {
+      FormRow(title: localized("Verify Password:")) {
         AirPortSecureField(
           text: $model.airPlay.verifySpeakerPassword,
-          placeholder: "Verify speaker password",
+          placeholder: localized("Verify speaker password"),
           identifier: "airplay.speaker.verify.password")
           .frame(height: 24)
       }
@@ -37,7 +37,7 @@ struct AirPlayPane: View {
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         BaseStationCheckbox(
-          "Remember this password in my keychain",
+          localized("Remember this password in my keychain"),
           isOn: Binding(
             get: { model.airPlay.rememberPassword },
             set: { model.updateRememberAirPlayPassword($0) }),
@@ -47,7 +47,7 @@ struct AirPlayPane: View {
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         BaseStationCheckbox(
-          "Enable AirPlay over WAN", isOn: $model.airPlay.overWAN,
+          localized("Enable AirPlay over WAN"), isOn: $model.airPlay.overWAN,
           identifier: "airplay.over.wan")
       }
       .disabled(!model.airPlay.enabled)

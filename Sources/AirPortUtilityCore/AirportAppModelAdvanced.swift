@@ -4,13 +4,13 @@ import Foundation
 extension AirportAppModel {
   func previewAdvanced() {
     guard supportsPane(.advanced) else {
-      status = "This base station does not support advanced settings."
+      status = localized("This base station does not support advanced settings.")
       clearPreviewAfterValidationFailure()
       return
     }
     previewFriendlySettings(
       title: "Advanced",
-      noChangesStatus: "No pending Advanced changes to preview."
+      noChangesStatus: localized("No pending Advanced changes to preview.")
     ) {
       advancedFlags(changesOnly: true)
     }
@@ -18,13 +18,13 @@ extension AirportAppModel {
 
   func applyAdvanced() {
     guard supportsPane(.advanced) else {
-      status = "This base station does not support advanced settings."
+      status = localized("This base station does not support advanced settings.")
       clearPreviewAfterValidationFailure()
       return
     }
     applyFriendlySettings(
       title: "Advanced",
-      noChangesStatus: "No pending Advanced changes to apply.",
+      noChangesStatus: localized("No pending Advanced changes to apply."),
       cleanScope: .advanced
     ) {
       advancedFlags(changesOnly: true)
@@ -39,14 +39,14 @@ extension AirportAppModel {
       let cleanDestination = normalized(cleanSnapshot.advanced.syslogDestinationAddress)
       if !changesOnly || destination != cleanDestination {
         guard destination.isEmpty || isIPv4Address(destination) else {
-          status = "Syslog Destination Address must be an IPv4 address."
+          status = localized("Syslog Destination Address must be an IPv4 address.")
           return nil
         }
         flags.append(("--syslog-destination", destination.isEmpty ? "0.0.0.0" : destination))
       }
       if !changesOnly || advanced.syslogLevel != cleanSnapshot.advanced.syslogLevel {
         guard (0...7).contains(advanced.syslogLevel) else {
-          status = "Syslog Level must be between 0 and 7."
+          status = localized("Syslog Level must be between 0 and 7.")
           return nil
         }
         flags.append(("--syslog-level", String(advanced.syslogLevel)))
@@ -78,29 +78,29 @@ extension AirportAppModel {
       if advanced.pppDialInEnabled {
         guard internet.connectUsing != .modem && !internet.modemUseAOL else {
           status =
-            "PPP Dial-in is not allowed when configured to connect to the Internet via the Modem or AOL."
+            localized("PPP Dial-in is not allowed when configured to connect to the Internet via the Modem or AOL.")
           return nil
         }
         guard network.routerMode != .dhcpOnly else {
-          status = "PPP Dial-in is not allowed when configured to share a range of addresses."
+          status = localized("PPP Dial-in is not allowed when configured to share a range of addresses.")
           return nil
         }
         guard advanced.pppDialInPassword == advanced.pppDialInVerifyPassword else {
-          status = "PPP Dial-in passwords do not match."
+          status = localized("PPP Dial-in passwords do not match.")
           return nil
         }
         guard (1...255).contains(advanced.pppDialInAnswerOnRing) else {
-          status = "Answer on ring must be between 1 and 255."
+          status = localized("Answer on ring must be between 1 and 255.")
           return nil
         }
         let idleValues = Set(ModemIdleOption.allCases.map(\.seconds))
         guard idleValues.contains(advanced.pppDialInIdleSeconds) else {
-          status = "Idle Disconnect After has an unsupported value."
+          status = localized("Idle Disconnect After has an unsupported value.")
           return nil
         }
         let maximumValues = Set(PPPDialInMaximumConnectOption.allCases.map(\.seconds))
         guard maximumValues.contains(advanced.pppDialInMaximumConnectSeconds) else {
-          status = "Maximum Connect Time has an unsupported value."
+          status = localized("Maximum Connect Time has an unsupported value.")
           return nil
         }
 
@@ -134,7 +134,7 @@ extension AirportAppModel {
       let cleanOptions = cleanSnapshot.legacyDeviceOptions.accessControl
       let modeChanged = options.mode != cleanOptions.mode
       guard ["not-enabled", "local", "radius"].contains(options.mode) else {
-        status = "Access Control mode is not supported."
+        status = localized("Access Control mode is not supported.")
         return nil
       }
       appendChanged(
@@ -151,42 +151,42 @@ extension AirportAppModel {
           changesOnly: changesOnly && !modeChanged)
       } else if options.mode == "radius" {
         guard ["default", "alternate"].contains(options.radiusType) else {
-          status = "RADIUS type is not supported."
+          status = localized("RADIUS type is not supported.")
           return nil
         }
         let primaryAddress = normalized(options.primaryAddress)
         let secondaryAddress = normalized(options.secondaryAddress)
         guard isIPv4Address(primaryAddress) else {
-          status = "Primary RADIUS Server must be an IPv4 address."
+          status = localized("Primary RADIUS Server must be an IPv4 address.")
           return nil
         }
         guard options.primarySecret == options.primaryVerifySecret else {
-          status = "Primary RADIUS shared secrets do not match."
+          status = localized("Primary RADIUS shared secrets do not match.")
           return nil
         }
         guard !normalized(options.primarySecret).isEmpty else {
-          status = "Primary RADIUS Shared Secret cannot be empty."
+          status = localized("Primary RADIUS Shared Secret cannot be empty.")
           return nil
         }
         guard (1...65_535).contains(options.primaryPort) else {
-          status = "Primary RADIUS port must be between 1 and 65535."
+          status = localized("Primary RADIUS port must be between 1 and 65535.")
           return nil
         }
         if !secondaryAddress.isEmpty {
           guard isIPv4Address(secondaryAddress) else {
-            status = "Secondary RADIUS Server must be an IPv4 address."
+            status = localized("Secondary RADIUS Server must be an IPv4 address.")
             return nil
           }
           guard options.secondarySecret == options.secondaryVerifySecret else {
-            status = "Secondary RADIUS shared secrets do not match."
+            status = localized("Secondary RADIUS shared secrets do not match.")
             return nil
           }
           guard !normalized(options.secondarySecret).isEmpty else {
-            status = "Secondary RADIUS Shared Secret cannot be empty."
+            status = localized("Secondary RADIUS Shared Secret cannot be empty.")
             return nil
           }
           guard (1...65_535).contains(options.secondaryPort) else {
-            status = "Secondary RADIUS port must be between 1 and 65535."
+            status = localized("Secondary RADIUS port must be between 1 and 65535.")
             return nil
           }
         }
@@ -232,11 +232,11 @@ extension AirportAppModel {
           $0.count == 2 && UInt8($0, radix: 16) != nil
         })
       else {
-        status = "Each local access-control entry must contain a valid MAC address."
+        status = localized("Each local access-control entry must contain a valid MAC address.")
         return nil
       }
       guard entry.description.lengthOfBytes(using: .utf8) <= 34 else {
-        status = "Access-control descriptions may contain at most 34 UTF-8 bytes."
+        status = localized("Access-control descriptions may contain at most 34 UTF-8 bytes.")
         return nil
       }
       objects.append(["macAddress": macAddress, "description": entry.description])
@@ -245,7 +245,7 @@ extension AirportAppModel {
       let data = try? JSONSerialization.data(withJSONObject: objects, options: [.sortedKeys]),
       let text = String(data: data, encoding: .utf8)
     else {
-      status = "Could not encode local access-control settings."
+      status = localized("Could not encode local access-control settings.")
       return nil
     }
     return text

@@ -60,7 +60,7 @@ extension AirportAppModel {
   func refreshSettings() async throws {
     if mockMode {
       loadMockState()
-      appendLog("Mock refresh completed.")
+      appendLog(localized("Mock refresh completed."))
       return
     }
 
@@ -91,8 +91,8 @@ extension AirportAppModel {
       Self.accessControlFeatureACPSettings, in: reader)
 
     guard !isEditingDevice else {
-      status = "Finish editing before refreshing settings."
-      appendLog("Ignored settings refresh while editing.")
+      status = localized("Finish editing before refreshing settings.")
+      appendLog(localized("Ignored settings refresh while editing."))
       return
     }
     guard connectionStillMatches(requestHost) else {
@@ -162,13 +162,13 @@ extension AirportAppModel {
     markClean()
     hasLoadedSettings = true
     hasTrustedConnectionPassword = true
-    status = "Connected to \(connection.host)"
+    status = localizedFormat("Connected to %@", connection.host)
     clearBaseStationUpdate(requestHost: requestHost)
     showConnectionDetails = false
     saveConnectionPasswordIfRequested()
     scheduleAutomaticFirmwareCatalogRefreshIfNeeded(requestHost: requestHost)
     restartWirelessClientPollingIfPossible()
-    appendLog("Refresh completed.")
+    appendLog(localized("Refresh completed."))
   }
 
   func readBaseStationIdentity(connection: AirportConnection? = nil) async throws -> (
@@ -1683,7 +1683,7 @@ extension AirportAppModel {
     productID: String = ""
   ) {
     guard !isEditingDevice else {
-      appendLog("Ignored identity refresh while editing.")
+      appendLog(localized("Ignored identity refresh while editing."))
       return
     }
     guard connectionStillMatches(requestHost) else {

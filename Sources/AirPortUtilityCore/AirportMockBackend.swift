@@ -55,19 +55,19 @@ enum AirportMockBackend {
   static func statusText(environmentValue: EnvironmentLookup) -> String {
     switch (environmentValue("AIRPORT_UTILITY_MOCK_STATUS") ?? "ok").lowercased() {
     case "archive", "archiving":
-      return "Archiving disk"
+      return localized("Archiving disk")
     case "corrupt", "corrupted", "disk-corrupted", "disk_corrupted", "repair":
-      return "Disk needs repair"
+      return localized("Disk needs repair")
     case "config", "configuration", "configuration-incorrect", "configuration_incorrect":
-      return "Configuration problem"
+      return localized("Configuration problem")
     case "double-nat", "double_nat":
-      return "Double NAT"
+      return localized("Double NAT")
     case "dns", "no-dns", "no_dns":
-      return "No DNS servers configured"
+      return localized("No DNS servers configured")
     case "restart", "restarting":
-      return "Restarting"
+      return localized("Restarting")
     default:
-      return "Working normally"
+      return localized("Working normally")
     }
   }
 
@@ -95,7 +95,7 @@ enum AirportMockBackend {
       extendsDeviceID: "mock-time-capsule",
       modelName: "AirPort Express",
       productID: "115",
-      statusText: "Working normally")
+      statusText: localized("Working normally"))
     let extreme = AirportDiscoveredDevice(
       id: "mock-extreme",
       name: "guest extreme",
@@ -104,7 +104,7 @@ enum AirportMockBackend {
       identifiers: ["mock-extreme"],
       modelName: "AirPort Extreme",
       productID: "117",
-      statusText: "Working normally")
+      statusText: localized("Working normally"))
 
     switch (environmentValue("AIRPORT_UTILITY_MOCK_TOPOLOGY") ?? "single").lowercased() {
     case "independent":

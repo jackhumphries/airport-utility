@@ -3,40 +3,40 @@ import Foundation
 enum DeviceStatusMessage {
   static func text(problemCodes: [String]) -> String {
     let codes = Set(normalizedProblemCodes(problemCodes))
-    guard !codes.isEmpty else { return "Working normally" }
+    guard !codes.isEmpty else { return localized("Working normally") }
 
     if !codes.isDisjoint(with: ["ArcI"]) {
-      return "Archiving disk"
+      return localized("Archiving disk")
     }
     if !codes.isDisjoint(with: ["EraI"]) {
-      return "Erasing disk"
+      return localized("Erasing disk")
     }
     if !codes.isDisjoint(with: ["fsck", "Ifsc", "SSdF", "mgrt"]) {
-      return "Disk needs repair"
+      return localized("Disk needs repair")
     }
     if !codes.isDisjoint(with: ["Ifsl"]) {
-      return "Disk space is low"
+      return localized("Disk space is low")
     }
     if !codes.isDisjoint(with: ["DubN"]) {
-      return "Double NAT"
+      return localized("Double NAT")
     }
     if !codes.isDisjoint(with: ["nDNS"]) {
-      return "No DNS servers configured"
+      return localized("No DNS servers configured")
     }
     if !codes.isDisjoint(with: ["pubP"]) {
-      return "Default password"
+      return localized("Default password")
     }
     if !codes.isDisjoint(with: ["opNW"]) {
-      return "Open wireless network"
+      return localized("Open wireless network")
     }
     if !codes.isDisjoint(with: ["waCF"]) {
-      return "WAN setup over Ethernet"
+      return localized("WAN setup over Ethernet")
     }
     if !codes.isDisjoint(with: ["wdsP", "bsWD"]) {
-      return "Wireless extension problem"
+      return localized("Wireless extension problem")
     }
     if codes.contains(where: { $0.hasPrefix("vErr") }) {
-      return "Configuration problem"
+      return localized("Configuration problem")
     }
     return "Needs attention: \(codes.sorted().joined(separator: ", "))"
   }
@@ -54,22 +54,22 @@ enum DeviceStatusMessage {
     var details: [String] = []
     if codes.contains("DubN") {
       if routerMode == .bridge {
-        details.append("Reports Double NAT despite Bridge Mode.")
+        details.append(localized("Reports Double NAT despite Bridge Mode."))
       } else {
-        details.append("Another router appears to be providing NAT upstream of this base station.")
+        details.append(localized("Another router appears to be providing NAT upstream of this base station."))
       }
     }
     if codes.contains("pubP") {
-      details.append("The base station is still using the default admin password.")
+      details.append(localized("The base station is still using the default admin password."))
     }
     if codes.contains("opNW") {
-      details.append("The wireless network is open and does not require a Wi-Fi password.")
+      details.append(localized("The wireless network is open and does not require a Wi-Fi password."))
     }
     if codes.contains("waCF") {
-      details.append("Setup over the Ethernet WAN port is enabled.")
+      details.append(localized("Setup over the Ethernet WAN port is enabled."))
     }
     if codes.contains("ctim") {
-      details.append("Initial setup has not been marked complete.")
+      details.append(localized("Initial setup has not been marked complete."))
     }
     return details
   }

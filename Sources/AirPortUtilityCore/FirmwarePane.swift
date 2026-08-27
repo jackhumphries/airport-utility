@@ -11,15 +11,15 @@ struct FirmwarePane: View {
 
   var body: some View {
     PaneBox {
-      FormRow(title: "Version:") {
+      FormRow(title: localized("Version:")) {
         Text(currentVersionText)
           .frame(width: 279, alignment: .leading)
           .accessibilityIdentifier("firmware.current.version")
       }
-      FormRow(title: "Available Firmware:") {
+      FormRow(title: localized("Available Firmware:")) {
         Picker("", selection: $model.firmware.selectedImageID) {
           if model.firmware.images.isEmpty {
-            Text("No firmware images loaded").tag("")
+            Text(localized("No firmware images loaded")).tag("")
           } else {
             ForEach(model.firmware.images) { image in
               Text(image.displayName).tag(image.id)
@@ -34,13 +34,13 @@ struct FirmwarePane: View {
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         DisksPaneButton(
-          "Check for Updates", width: 126, isEnabled: !model.isBusy,
+          localized("Check for Updates"), width: 126, isEnabled: !model.isBusy,
           identifier: "firmware.check.for.updates"
         ) {
           model.refreshFirmwareImages()
         }
         DisksPaneButton(
-          "Choose...", width: 72, isEnabled: !model.isBusy,
+          localized("Choose..."), width: 72, isEnabled: !model.isBusy,
           identifier: "firmware.choose.image"
         ) {
           isChoosingFirmwareImage = true
@@ -77,7 +77,7 @@ struct FirmwarePane: View {
         }
       }
       if model.firmware.transferProgress.isVisible {
-        FormRow(title: "Progress:") {
+        FormRow(title: localized("Progress:")) {
           VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
               Text(model.firmware.transferProgress.phase.label)
@@ -131,7 +131,7 @@ struct FirmwarePane: View {
 
   private var currentVersionText: String {
     let version = model.firmware.currentVersion.trimmingCharacters(in: .whitespacesAndNewlines)
-    return version.isEmpty ? "Unknown" : version
+    return version.isEmpty ? localized("Unknown") : version
   }
 
   private var canInstall: Bool {
@@ -139,8 +139,8 @@ struct FirmwarePane: View {
   }
 
   private var installButtonTitle: String {
-    guard let image = model.firmware.selectedImage else { return "Install" }
-    return image.version == model.firmware.currentVersion ? "Reinstall" : "Install"
+    guard let image = model.firmware.selectedImage else { return localized("Install") }
+    return image.version == model.firmware.currentVersion ? localized("Reinstall") : localized("Install")
   }
 
   @ViewBuilder

@@ -91,7 +91,7 @@ extension AirportAppModel {
 
   public var defaultConfigurationFileName: String {
     let name = baseStation.name.trimmingCharacters(in: .whitespacesAndNewlines)
-    let baseName = name.isEmpty ? "AirPort Configuration" : name
+    let baseName = name.isEmpty ? localized("AirPort Configuration") : name
     let invalidCharacters = CharacterSet(charactersIn: "/:")
       .union(.newlines)
       .union(.controlCharacters)
@@ -100,7 +100,7 @@ extension AirportAppModel {
       .components(separatedBy: invalidCharacters)
       .joined(separator: " ")
       .trimmingCharacters(in: .whitespacesAndNewlines)
-    return (sanitized.isEmpty ? "AirPort Configuration" : sanitized) + ".baseconfig"
+    return (sanitized.isEmpty ? localized("AirPort Configuration") : sanitized) + ".baseconfig"
   }
 
   public func exportConfiguration(to url: URL) throws {

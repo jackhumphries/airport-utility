@@ -1,0 +1,14 @@
+// Shared build settings for AirPortUtility.xcodeproj.
+//
+// The bundle identifier is defined here rather than in the target so a fork can
+// override it without touching a committed file. Create Packaging/Local.xcconfig
+// (gitignored) to set your own:
+//
+//     PRODUCT_BUNDLE_IDENTIFIER = com.example.airport-utility
+//
+// make-app.sh reads the same file, so both build paths stay in agreement.
+
+PRODUCT_BUNDLE_IDENTIFIER = io.github.jackhumphries.airport-utility
+
+// Optional include: absent by default, and the build must not fail without it.
+#include? "Local.xcconfig"

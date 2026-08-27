@@ -27,6 +27,17 @@ struct AirportConnection: Equatable, Sendable {
       return currentURL.path
     }
 
+    // A packaged .app ships the backend at Contents/Resources/backend. The
+    // executable-relative walk below only finds a backend that sits beside the
+    // binary, which is the layout of a source checkout, not of a bundle.
+    // Resources is the correct home for it: everything in Contents/MacOS is
+    // treated as code by codesign, and the backend is not a Mach-O executable.
+    if let resourceURL = Bundle.main.resourceURL,
+      containsBackendScripts(resourceURL, fileManager: fileManager)
+    {
+      return resourceURL.path
+    }
+
     if let executableURL = Bundle.main.executableURL {
       var candidate = executableURL.deletingLastPathComponent()
       for _ in 0..<10 {
@@ -97,11 +108,11 @@ struct WirelessClient: Codable, Equatable, Identifiable, Sendable {
 
   private var detailMACAddress: String {
     let address = macAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-    return address.isEmpty ? "Unknown" : address.uppercased()
+    return address.isEmpty ? localized("Unknown") : address.uppercased()
   }
 
   private var qualityLabel: String {
-    guard let rssi = normalizedRSSI else { return "Unknown" }
+    guard let rssi = normalizedRSSI else { return localized("Unknown") }
     switch rssi {
     case ..<(-99): return "Poor"
     case -99...(-90): return "Fair"
@@ -118,7 +129,7 @@ struct WirelessClient: Codable, Equatable, Identifiable, Sendable {
       dataRateMbps >= 0,
       dataRateMbps < Double(Int.max)
     else {
-      return "Unknown"
+      return localized("Unknown")
     }
     let value =
       dataRateMbps.rounded() == dataRateMbps
@@ -128,13 +139,13 @@ struct WirelessClient: Codable, Equatable, Identifiable, Sendable {
   }
 
   private var rssiLabel: String {
-    guard let rssi = normalizedRSSI else { return "Unknown" }
+    guard let rssi = normalizedRSSI else { return localized("Unknown") }
     return "\(rssi) dBm"
   }
 
   private var phyModeLabel: String {
     let mode = phyMode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    return mode.isEmpty ? "Unknown" : mode
+    return mode.isEmpty ? localized("Unknown") : mode
   }
 }
 
@@ -186,6 +197,13 @@ enum Pane: String, CaseIterable, Identifiable, Sendable, Codable {
   case firmware = "Firmware"
 
   var id: String { rawValue }
+
+  /// Localized tab title.
+  ///
+  /// `rawValue` deliberately stays English: it is persisted through `Codable`,
+  /// used to build snapshot file names, and used for accessibility
+  /// identifiers, none of which may shift with the user's language.
+  var displayName: String { localized(rawValue) }
 }
 
 enum ConnectUsing: String, CaseIterable, Identifiable, Sendable, Codable {
@@ -214,9 +232,9 @@ enum RouterMode: String, CaseIterable, Identifiable, Sendable, Codable {
   var id: String { rawValue }
   var label: String {
     switch self {
-    case .dhcpAndNat: "DHCP and NAT"
-    case .dhcpOnly: "DHCP Only"
-    case .natOnly: "NAT Only"
+    case .dhcpAndNat: localized("DHCP and NAT")
+    case .dhcpOnly: localized("DHCP Only")
+    case .natOnly: localized("NAT Only")
     case .bridge: "Off (Bridge Mode)"
     }
   }
@@ -232,9 +250,9 @@ enum EraseMethod: String, CaseIterable, Identifiable, Sendable {
   var label: String {
     switch self {
     case .quick: "Quick Erase"
-    case .zero: "Zero Out Data"
-    case .sevenPass: "7-Pass Erase"
-    case .thirtyFivePass: "35-Pass Erase"
+    case .zero: localized("Zero Out Data")
+    case .sevenPass: localized("7-Pass Erase")
+    case .thirtyFivePass: localized("35-Pass Erase")
     }
   }
 }
@@ -244,7 +262,8 @@ struct BaseStationState: Equatable, Codable {
   var serialNumber = ""
   var version = ""
   var productID = ""
-  var statusText = "Working normally"
+  // Must match DeviceStatusMessage.text([]) -- the topology compares them.
+  var statusText = localized("Working normally")
   var problemCodes: [String] = []
   var newAdminPassword = ""
   var verifyAdminPassword = ""
@@ -257,7 +276,7 @@ struct BaseStationState: Equatable, Codable {
     serialNumber: String = "",
     version: String = "",
     productID: String = "",
-    statusText: String = "Working normally",
+    statusText: String = localized("Working normally"),
     problemCodes: [String] = [],
     newAdminPassword: String = "",
     verifyAdminPassword: String = "",
@@ -299,7 +318,7 @@ struct BaseStationState: Equatable, Codable {
     version = try container.decodeIfPresent(String.self, forKey: .version) ?? ""
     productID = try container.decodeIfPresent(String.self, forKey: .productID) ?? ""
     statusText =
-      try container.decodeIfPresent(String.self, forKey: .statusText) ?? "Working normally"
+      try container.decodeIfPresent(String.self, forKey: .statusText) ?? localized("Working normally")
     problemCodes = try container.decodeIfPresent([String].self, forKey: .problemCodes) ?? []
     newAdminPassword = try container.decodeIfPresent(String.self, forKey: .newAdminPassword) ?? ""
     verifyAdminPassword =
@@ -362,9 +381,9 @@ struct ModemIdleOption: Identifiable, Equatable, Sendable {
     ModemIdleOption(seconds: 120, label: "2 minutes"),
     ModemIdleOption(seconds: 300, label: "5 minutes"),
     ModemIdleOption(seconds: 600, label: "10 minutes"),
-    ModemIdleOption(seconds: 900, label: "15 minutes"),
+    ModemIdleOption(seconds: 900, label: localized("15 minutes")),
     ModemIdleOption(seconds: 1_200, label: "20 minutes"),
-    ModemIdleOption(seconds: 1_800, label: "30 minutes"),
+    ModemIdleOption(seconds: 1_800, label: localized("30 minutes")),
   ]
 }
 
@@ -389,8 +408,8 @@ struct PPPoEConnectionOption: Identifiable, Equatable, Sendable {
   let label: String
 
   static let allCases: [PPPoEConnectionOption] = [
-    PPPoEConnectionOption(value: "always-on", label: "Always On"),
-    PPPoEConnectionOption(value: "automatic", label: "Automatic"),
+    PPPoEConnectionOption(value: "always-on", label: localized("Always On")),
+    PPPoEConnectionOption(value: "automatic", label: localized("Automatic")),
     PPPoEConnectionOption(value: "manual", label: "Manual"),
   ]
 }
@@ -477,10 +496,50 @@ struct WirelessRadioModeOption: Identifiable, Equatable, Sendable {
 }
 
 struct WirelessRegionOption: Identifiable, Equatable, Sendable {
+  /// ACP region index. Wire value -- never localized.
   var code: String
+  /// English region name. Doubles as the lookup key and the fallback.
   var name: String
 
   var id: String { code }
+
+  /// The region name in the user's language.
+  ///
+  /// Foundation is the source of truth here: hand-translating 172 country
+  /// names into four languages would be redundant, and Locale already carries
+  /// authoritative names for every one of them. Only the names Apple spells
+  /// differently from the current ISO English need an alias.
+  /// The ISO region this option maps to, if any. Internal so a test can assert
+  /// the whole list maps; an unmapped entry silently falls back to English.
+  var isoRegionCode: String? { Self.isoRegionCodesByEnglishName[name.lowercased()] }
+
+  var localizedName: String {
+    guard let region = Self.isoRegionCodesByEnglishName[name.lowercased()] else {
+      return name
+    }
+    return AirPortLocalization.locale.localizedString(forRegionCode: region) ?? name
+  }
+
+  /// Names this list spells differently from Foundation's current English.
+  private static let isoRegionAliases: [String: String] = [
+    "czech republic": "CZ", "slovak republic": "SK", "hong kong s.a.r., china": "HK",
+    "china": "CN", "antigua and barbuda": "AG", "bosnia herzegovina": "BA",
+    "british indian ocean territory": "IO", "cocos islands": "CC", "congo": "CG",
+    "ivory coast": "CI", "east timor": "TL", "guinea bissau": "GW", "macau": "MO",
+    "macedonia": "MK", "trinidad and tobago": "TT", "turkey": "TR",
+    "us virgin islands": "VI", "myanmar": "MM",
+  ]
+
+  private static let isoRegionCodesByEnglishName: [String: String] = {
+    let english = Locale(identifier: "en_US")
+    var map: [String: String] = [:]
+    for region in Locale.Region.isoRegions.map(\.identifier) {
+      if let name = english.localizedString(forRegionCode: region) {
+        map[name.lowercased()] = region
+      }
+    }
+    return map.merging(isoRegionAliases) { _, alias in alias }
+  }()
 
   static let allCases = [
     WirelessRegionOption(code: "0", name: "United States"),
@@ -688,11 +747,11 @@ struct DHCPLeaseUnitOption: Identifiable, Equatable, Sendable {
   let label: String
 
   static let allCases: [DHCPLeaseUnitOption] = [
-    DHCPLeaseUnitOption(value: "seconds", label: "second"),
-    DHCPLeaseUnitOption(value: "minutes", label: "minute"),
-    DHCPLeaseUnitOption(value: "hours", label: "hour"),
-    DHCPLeaseUnitOption(value: "days", label: "day"),
-    DHCPLeaseUnitOption(value: "weeks", label: "week"),
+    DHCPLeaseUnitOption(value: "seconds", label: localized("second")),
+    DHCPLeaseUnitOption(value: "minutes", label: localized("minute")),
+    DHCPLeaseUnitOption(value: "hours", label: localized("hour")),
+    DHCPLeaseUnitOption(value: "days", label: localized("day")),
+    DHCPLeaseUnitOption(value: "weeks", label: localized("week")),
   ]
 }
 
@@ -809,14 +868,14 @@ struct SyslogLevelOption: Identifiable, Equatable, Sendable {
   let label: String
 
   static let allCases = [
-    SyslogLevelOption(level: 0, label: "0 - Emergency"),
-    SyslogLevelOption(level: 1, label: "1 - Alert"),
-    SyslogLevelOption(level: 2, label: "2 - Critical"),
-    SyslogLevelOption(level: 3, label: "3 - Error"),
-    SyslogLevelOption(level: 4, label: "4 - Warning"),
-    SyslogLevelOption(level: 5, label: "5 - Notice"),
-    SyslogLevelOption(level: 6, label: "6 - Informational"),
-    SyslogLevelOption(level: 7, label: "7 - Debug"),
+    SyslogLevelOption(level: 0, label: localized("0 - Emergency")),
+    SyslogLevelOption(level: 1, label: localized("1 - Alert")),
+    SyslogLevelOption(level: 2, label: localized("2 - Critical")),
+    SyslogLevelOption(level: 3, label: localized("3 - Error")),
+    SyslogLevelOption(level: 4, label: localized("4 - Warning")),
+    SyslogLevelOption(level: 5, label: localized("5 - Notice")),
+    SyslogLevelOption(level: 6, label: localized("6 - Informational")),
+    SyslogLevelOption(level: 7, label: localized("7 - Debug")),
   ]
 }
 
@@ -826,13 +885,13 @@ struct PPPDialInMaximumConnectOption: Identifiable, Equatable, Sendable {
   let label: String
 
   static let allCases = [
-    PPPDialInMaximumConnectOption(seconds: 0, label: "Never Disconnect"),
-    PPPDialInMaximumConnectOption(seconds: 900, label: "15 minutes"),
-    PPPDialInMaximumConnectOption(seconds: 1_800, label: "30 minutes"),
-    PPPDialInMaximumConnectOption(seconds: 3_600, label: "1 hour"),
-    PPPDialInMaximumConnectOption(seconds: 7_200, label: "2 hours"),
-    PPPDialInMaximumConnectOption(seconds: 14_400, label: "4 hours"),
-    PPPDialInMaximumConnectOption(seconds: 28_800, label: "8 hours"),
+    PPPDialInMaximumConnectOption(seconds: 0, label: localized("Never Disconnect")),
+    PPPDialInMaximumConnectOption(seconds: 900, label: localized("15 minutes")),
+    PPPDialInMaximumConnectOption(seconds: 1_800, label: localized("30 minutes")),
+    PPPDialInMaximumConnectOption(seconds: 3_600, label: localized("1 hour")),
+    PPPDialInMaximumConnectOption(seconds: 7_200, label: localized("2 hours")),
+    PPPDialInMaximumConnectOption(seconds: 14_400, label: localized("4 hours")),
+    PPPDialInMaximumConnectOption(seconds: 28_800, label: localized("8 hours")),
   ]
 }
 
@@ -1011,7 +1070,7 @@ enum FirmwareTransferPhase: String, Equatable, Sendable {
     case .none:
       ""
     case .download:
-      "Downloading from Apple"
+      localized("Downloading from Apple")
     case .upload:
       "Uploading to AirPort"
     case .program:
@@ -1175,7 +1234,7 @@ struct AirportDiscoveredDevice: Identifiable, Equatable, Sendable {
   var displayModelName: String {
     let modelName = modelName.trimmingCharacters(in: .whitespacesAndNewlines)
     if !modelName.isEmpty { return modelName }
-    return "AirPort Base Station"
+    return localized("AirPort Base Station")
   }
 
   var connectionHost: String {

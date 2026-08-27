@@ -7,17 +7,17 @@ struct WirelessPane: View {
 
   var body: some View {
     PaneBox {
-      FormRow(title: "Network Mode:") {
+      FormRow(title: localized("Network Mode:")) {
         Picker("", selection: wirelessMode) {
-          Text("Create a wireless network").tag("create")
+          Text(localized("Create a wireless network")).tag("create")
           if model.showsWirelessClientModeControls || model.wireless.mode == "join" {
-            Text("Join a wireless network").tag("join")
+            Text(localized("Join a wireless network")).tag("join")
           }
           if model.showsClassicWDSWirelessControls || model.wireless.mode == "wds" {
-            Text("Participate in a WDS network").tag("wds")
+            Text(localized("Participate in a WDS network")).tag("wds")
           }
-          Text("Extend a wireless network").tag("extend")
-          Text("Off").tag("off")
+          Text(localized("Extend a wireless network")).tag("extend")
+          Text(localized("Off")).tag("off")
         }
         .pickerStyle(.menu)
         .labelsHidden()
@@ -25,7 +25,7 @@ struct WirelessPane: View {
       }
       if model.wireless.mode != "off" {
         VStack(alignment: .leading, spacing: 12) {
-          FormRow(title: "Wireless Network Name:") {
+          FormRow(title: localized("Wireless Network Name:")) {
             if model.wireless.mode == "extend" || model.wireless.mode == "wds" {
               WirelessNetworkNameComboBox(
                 text: $model.wireless.networkName,
@@ -34,11 +34,11 @@ struct WirelessPane: View {
             } else {
               AirPortTextField(
                 text: $model.wireless.networkName,
-                placeholder: "Network name",
+                placeholder: localized("Network name"),
                 identifier: "wireless.network.name")
             }
           }
-          FormRow(title: "Wireless Security:") {
+          FormRow(title: localized("Wireless Security:")) {
             Picker("", selection: $model.wireless.security) {
               ForEach(model.wirelessSecurityOptions) { option in
                 Text(option.label).tag(option.rawValue)
@@ -50,41 +50,41 @@ struct WirelessPane: View {
           }
           if model.wireless.mode == "create" {
             FormRow(title: "") {
-              Toggle("Allow this network to be extended", isOn: $model.wireless.allowNetworkExtension)
+              Toggle(localized("Allow this network to be extended"), isOn: $model.wireless.allowNetworkExtension)
                 .toggleStyle(.checkbox)
                 .accessibilityIdentifier("wireless.allow.network.extension")
             }
           }
           if model.wireless.mode == "wds" {
-            FormRow(title: "WDS Mode:") {
+            FormRow(title: localized("WDS Mode:")) {
               Picker("", selection: $model.wireless.wdsMode) {
-                Text("WDS main").tag("main")
-                Text("WDS relay").tag("relay")
-                Text("WDS remote").tag("remote")
+                Text(localized("WDS main")).tag("main")
+                Text(localized("WDS relay")).tag("relay")
+                Text(localized("WDS remote")).tag("remote")
               }
               .pickerStyle(.menu)
               .labelsHidden()
               .accessibilityIdentifier("wireless.wds.mode")
             }
-            FormRow(title: "WDS Peers:") {
+            FormRow(title: localized("WDS Peers:")) {
               AirPortTextField(
                 text: $model.wireless.wdsPeerAirPortIDs,
-                placeholder: "AirPort ID",
+                placeholder: localized("AirPort ID"),
                 identifier: "wireless.wds.peers")
             }
           }
           if model.wireless.security != "none" {
-            FormRow(title: "Wireless Password:") {
+            FormRow(title: localized("Wireless Password:")) {
               AirPortSecureField(
                 text: $model.wireless.password,
-                placeholder: "New wireless password",
+                placeholder: localized("New wireless password"),
                 identifier: "wireless.password")
                 .frame(height: 24)
             }
             FormRow(title: "Verify Password:") {
               AirPortSecureField(
                 text: $model.wireless.verifyPassword,
-                placeholder: "Verify wireless password",
+                placeholder: localized("Verify wireless password"),
                 identifier: "wireless.verify.password")
                 .frame(height: 24)
             }
@@ -93,7 +93,7 @@ struct WirelessPane: View {
           HStack {
             Spacer().frame(width: AirPortLayout.formControlLeading)
             WirelessPaneButton(
-              "Wireless Options...", identifier: "wireless.options.open"
+              localized("Wireless Options..."), identifier: "wireless.options.open"
             ) { showOptions = true }
               .frame(width: 147, height: 22)
           }
@@ -150,7 +150,7 @@ private struct WirelessNetworkNameComboBox: NSViewRepresentable {
     comboBox.controlSize = .regular
     comboBox.focusRingType = .none
     comboBox.delegate = context.coordinator
-    comboBox.setAccessibilityTitle("Wireless Network Name")
+    comboBox.setAccessibilityTitle(localized("Wireless Network Name"))
     comboBox.setAccessibilityIdentifier("wireless.network.name")
     updateItems(on: comboBox, items: items)
     comboBox.stringValue = text

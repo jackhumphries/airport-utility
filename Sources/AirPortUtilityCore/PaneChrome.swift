@@ -29,25 +29,34 @@ enum AirPortLayout {
     panes.reduce(CGFloat(0)) { $0 + topTabWidth(for: $1) }
   }
 
+  /// Smallest gap between a tab's label and its edges.
+  ///
+  /// 19pt is the tightest padding the measured English widths below imply
+  /// ("Advanced", 60pt of text in a 79pt tab), so sizing to text + this value
+  /// can never make an English tab wider than it already is.
+  static let topTabHorizontalPadding: CGFloat = 19
+
+  /// Width of one tab.
+  ///
+  /// The constants are the widths measured against the English labels, kept as
+  /// a floor so the English tab bar is unchanged. A translated label that needs
+  /// more room than its English counterpart gets it, instead of being cramped
+  /// or clipped.
   static func topTabWidth(for pane: Pane) -> CGFloat {
-    switch pane {
-    case .baseStation:
-      99
-    case .internet:
-      70
-    case .wireless:
-      74
-    case .network:
-      73
-    case .airPlay:
-      67
-    case .disks:
-      55
-    case .advanced:
-      79
-    case .firmware:
-      82
-    }
+    let englishWidth: CGFloat =
+      switch pane {
+      case .baseStation: 99
+      case .internet: 70
+      case .wireless: 74
+      case .network: 73
+      case .airPlay: 67
+      case .disks: 55
+      case .advanced: 79
+      case .firmware: 82
+      }
+    let label = pane.displayName.size(
+      withAttributes: [.font: NSFont.systemFont(ofSize: 13)])
+    return max(englishWidth, ceil(label.width) + topTabHorizontalPadding)
   }
 }
 
@@ -80,11 +89,11 @@ struct ConfigurationSheet<Content: View>: View {
         } else {
           Spacer()
         }
-        SheetFooterButton("Cancel", width: 70, identifier: "sheet.cancel") {
+        SheetFooterButton(localized("Cancel"), width: 70, identifier: "sheet.cancel") {
           model.cancelEditing()
         }
         SheetFooterButton(
-          "Update",
+          localized("Update"),
           width: 73,
           isDefault: true,
           isEnabled: model.canApplyPendingChanges,
@@ -116,12 +125,25 @@ struct ConfigurationSheet<Content: View>: View {
     AirPortLayout.configurationSheetWidth(for: model.visiblePanes)
   }
 
+  /// Whether `status` is one of the connection-state messages the footer hides.
+  ///
+  /// The prefix is taken from the same format string the status was built from,
+  /// so this keeps working in every language. Hardcoding the English prefix
+  /// silently stopped matching as soon as those messages were localized.
+  private func isConnectionStatus(_ status: String) -> Bool {
+    for key in ["Connected to %@", "Ready to connect to %@"] {
+      let prefix = localized(key).components(separatedBy: "%@")[0]
+      if !prefix.isEmpty, status.hasPrefix(prefix) {
+        return true
+      }
+    }
+    return false
+  }
+
   private var footerStatus: String? {
     let status = model.status.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !status.isEmpty else { return nil }
-    guard !status.hasPrefix("Connected"), !status.hasPrefix("Ready to connect"),
-      status != "Not connected"
-    else {
+    guard !isConnectionStatus(status), status != localized("Not connected") else {
       return nil
     }
     return status
@@ -179,7 +201,13 @@ private struct SheetFooterButton: NSViewRepresentable {
     button.setButtonType(.momentaryPushIn)
     button.alignment = .center
     button.translatesAutoresizingMaskIntoConstraints = false
-    button.widthAnchor.constraint(equalToConstant: width).isActive = true
+    // Exact width, but never narrower than the label needs. The constants were
+    // measured against English and truncate longer translations; a plain
+    // greaterThanOrEqual constraint instead lets the button expand to fill,
+    // which changes the English layout.
+    button.widthAnchor.constraint(
+      equalToConstant: max(width, button.intrinsicContentSize.width)
+    ).isActive = true
     button.heightAnchor.constraint(equalToConstant: 22).isActive = true
     configure(button)
     return button
@@ -323,7 +351,7 @@ private final class TopTabsNSView: NSView {
 
   init(action: TopTabsControl.Coordinator) {
     self.control = NSSegmentedControl(
-      labels: Pane.allCases.map(\.rawValue),
+      labels: Pane.allCases.map(\.displayName),
       trackingMode: .selectOne,
       target: action,
       action: #selector(TopTabsControl.Coordinator.selectPane(_:)))
@@ -383,7 +411,7 @@ private final class TopTabsNSView: NSView {
     control.segmentCount = panes.count
     tabElements = []
     for (index, pane) in panes.enumerated() {
-      control.setLabel(pane.rawValue, forSegment: index)
+      control.setLabel(pane.displayName, forSegment: index)
       control.setWidth(Self.width(for: pane), forSegment: index)
       let element = TopTabAccessibilityElement(owner: self, pane: pane)
       element.setAccessibilityParent(self)
@@ -424,7 +452,7 @@ private final class TopTabAccessibilityElement: NSAccessibilityElement {
   }
 
   override func accessibilityTitle() -> String? {
-    pane.rawValue
+    pane.displayName
   }
 
   override func accessibilityIdentifier() -> String? {
@@ -518,7 +546,7 @@ struct CommandPreviewView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Text(model.preview?.title ?? "Command Log")
+        Text(model.preview?.title ?? localized("Command Log"))
           .font(.subheadline.weight(.semibold))
         Spacer()
         if model.isBusy {
@@ -530,7 +558,7 @@ struct CommandPreviewView: View {
         Text(AirportCommand.display(AirportCommand.writeScript, preview.redactedArguments))
           .font(.system(.caption, design: .monospaced))
           .textSelection(.enabled)
-        Text(preview.output.isEmpty ? "Dry-run completed without output." : preview.output)
+        Text(preview.output.isEmpty ? localized("Dry-run completed without output.") : preview.output)
           .font(.system(.caption, design: .monospaced))
           .foregroundStyle(.secondary)
           .lineLimit(4)
@@ -570,7 +598,10 @@ struct AirPortButtonStyle: ButtonStyle {
       .foregroundStyle(
         emphasized && isEnabled ? Color.white : Color.primary.opacity(isEnabled ? 1 : 0.45)
       )
-      .frame(width: width, height: 22)
+      // minWidth, not width: the fixed widths throughout these panes were
+      // measured against English labels. A minimum keeps English pixel-identical
+      // while letting longer translations grow instead of truncating.
+      .frame(minWidth: width).frame(height: 22)
       .background(backgroundColor)
       .clipShape(RoundedRectangle(cornerRadius: 5))
       .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.black.opacity(0.20), lineWidth: 1))

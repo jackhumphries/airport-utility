@@ -16,7 +16,7 @@ extension AirportAppModel {
           cleanValue: cleanSnapshot.internet.configureIPv6,
           changesOnly: changesOnly,
           allowed: ["link-local", "automatic", "manual"],
-          statusMessage: "Configure IPv6 must be link-local, automatic, or manual."
+          statusMessage: localized("Configure IPv6 must be link-local, automatic, or manual.")
         )
       else { return nil }
       guard
@@ -25,7 +25,7 @@ extension AirportAppModel {
           cleanValue: cleanSnapshot.internet.ipv6Mode,
           changesOnly: changesOnly,
           allowed: ["host", "tunnel", "router"],
-          statusMessage: "IPv6 Mode must be host, tunnel, or router.",
+          statusMessage: localized("IPv6 Mode must be host, tunnel, or router."),
           allowEmpty: true
         )
       else { return nil }
@@ -43,16 +43,16 @@ extension AirportAppModel {
         normalized(internet.routerAddress) != normalized(cleanSnapshot.internet.routerAddress)
       guard !needsValidation(ipv4AddressChanged) || !normalized(internet.ipv4Address).isEmpty
       else {
-        status = "IPv4 Address cannot be empty."
+        status = localized("IPv4 Address cannot be empty.")
         return nil
       }
       guard !needsValidation(ipv4AddressChanged) || isIPv4Address(internet.ipv4Address) else {
-        status = "IPv4 Address must be an IPv4 address."
+        status = localized("IPv4 Address must be an IPv4 address.")
         return nil
       }
       guard !needsValidation(subnetMaskChanged) || !normalized(internet.subnetMask).isEmpty
       else {
-        status = "Subnet Mask cannot be empty."
+        status = localized("Subnet Mask cannot be empty.")
         return nil
       }
       if needsValidation(subnetMaskChanged),
@@ -63,11 +63,11 @@ extension AirportAppModel {
       }
       guard !needsValidation(routerAddressChanged) || !normalized(internet.routerAddress).isEmpty
       else {
-        status = "Router Address cannot be empty."
+        status = localized("Router Address cannot be empty.")
         return nil
       }
       guard !needsValidation(routerAddressChanged) || isIPv4Address(internet.routerAddress) else {
-        status = "Router Address must be an IPv4 address."
+        status = localized("Router Address must be an IPv4 address.")
         return nil
       }
       appendChanged(
@@ -105,10 +105,10 @@ extension AirportAppModel {
         cleanValue: cleanDNSServersForDiff,
         changesOnly: changesOnly,
         maxCount: 2,
-        countError: "DNS Servers accepts at most two IPv4 DNS servers.",
-        emptyValueError: "DNS Servers contains an empty value.",
+        countError: localized("DNS Servers accepts at most two IPv4 DNS servers."),
+        emptyValueError: localized("DNS Servers contains an empty value."),
         validator: isIPv4Address,
-        validationError: "DNS Server must be an IPv4 address.",
+        validationError: localized("DNS Server must be an IPv4 address."),
         slotValueFlags: ["--dns-server-1", "--dns-server-2"]
       )
     else { return nil }
@@ -122,10 +122,10 @@ extension AirportAppModel {
           cleanValue: cleanIPv6DNSServersForDiff,
           changesOnly: changesOnly,
           maxCount: 2,
-          countError: "IPv6 DNS Servers accepts at most two IPv6 DNS servers.",
-          emptyValueError: "IPv6 DNS Servers contains an empty value.",
+          countError: localized("IPv6 DNS Servers accepts at most two IPv6 DNS servers."),
+          emptyValueError: localized("IPv6 DNS Servers contains an empty value."),
           validator: isIPv6Address,
-          validationError: "IPv6 DNS Server must be an IPv6 address.",
+          validationError: localized("IPv6 DNS Server must be an IPv6 address."),
           normalizer: normalizedIPv6Address
         )
       else { return nil }
@@ -141,7 +141,7 @@ extension AirportAppModel {
       let ipv6Address = normalizedIPv6Address(internet.ipv6Address)
       if !ipv6Address.isEmpty {
         guard isIPv6Address(ipv6Address) else {
-          status = "IPv6 Address must be an IPv6 address."
+          status = localized("IPv6 Address must be an IPv6 address.")
           return nil
         }
         flags.append(("--ipv6-address", ipv6Address))
@@ -159,11 +159,11 @@ extension AirportAppModel {
           cleanValue: cleanSnapshot.internet.pppoeConnection,
           changesOnly: changesOnly,
           allowed: ["always-on", "automatic", "manual"],
-          statusMessage: "PPPoE Connection must be always-on, automatic, or manual."
+          statusMessage: localized("PPPoE Connection must be always-on, automatic, or manual.")
         )
       else { return nil }
       guard !shouldValidatePPPoEAccount || !normalized(internet.pppoeAccount).isEmpty else {
-        status = "PPPoE Account Name cannot be empty."
+        status = localized("PPPoE Account Name cannot be empty.")
         return nil
       }
       appendChanged(
@@ -181,12 +181,12 @@ extension AirportAppModel {
     }
     if internet.connectUsing == .modem {
       guard showsModemControls else {
-        status = "This base station does not support a modem connection."
+        status = localized("This base station does not support a modem connection.")
         return nil
       }
       let modemModeChanged = cleanSnapshot.internet.connectUsing != .modem
       guard internet.modemPassword == internet.modemVerifyPassword else {
-        status = "Modem passwords do not match."
+        status = localized("Modem passwords do not match.")
         return nil
       }
       let diffOnly = changesOnly && !modemModeChanged
@@ -305,7 +305,7 @@ extension AirportAppModel {
       let shouldValidateGlobalHostname =
         !changesOnly || dynamicGlobalHostnameChanged || globalHostnameChanged
       guard !shouldValidateGlobalHostname || !normalized(internet.globalHostname).isEmpty else {
-        status = "Global Hostname cannot be empty."
+        status = localized("Global Hostname cannot be empty.")
         return nil
       }
       appendChanged(

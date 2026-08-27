@@ -27,6 +27,17 @@ struct AirportConnection: Equatable, Sendable {
       return currentURL.path
     }
 
+    // A packaged .app ships the backend at Contents/Resources/backend. The
+    // executable-relative walk below only finds a backend that sits beside the
+    // binary, which is the layout of a source checkout, not of a bundle.
+    // Resources is the correct home for it: everything in Contents/MacOS is
+    // treated as code by codesign, and the backend is not a Mach-O executable.
+    if let resourceURL = Bundle.main.resourceURL,
+      containsBackendScripts(resourceURL, fileManager: fileManager)
+    {
+      return resourceURL.path
+    }
+
     if let executableURL = Bundle.main.executableURL {
       var candidate = executableURL.deletingLastPathComponent()
       for _ in 0..<10 {

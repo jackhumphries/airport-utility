@@ -7,7 +7,11 @@ let package = Package(
     .macOS(.v13)
   ],
   products: [
-    .executable(name: "AirPort Utility", targets: ["AirPortUtilityApp"])
+    .executable(name: "AirPort Utility", targets: ["AirPortUtilityApp"]),
+    // Exposed as a product so AirPortUtility.xcodeproj can depend on it as a
+    // local package product. Xcode can only link products, not bare targets,
+    // and this keeps the app target from having to duplicate the source list.
+    .library(name: "AirPortUtilityCore", targets: ["AirPortUtilityCore"]),
   ],
   targets: [
     .target(

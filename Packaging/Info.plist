@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>AirPort Utility</string>
+	<key>CFBundleDisplayName</key>
+	<string>AirPort Utility</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>MIT License. Not affiliated with or endorsed by Apple Inc.</string>
+
+	<!-- Finder-launched apps inherit a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin),
+	     not the user's shell PATH, so "#!/usr/bin/env python3" in the backend would
+	     resolve to /usr/bin/python3 (a Command Line Tools stub, Python 3.9.6).
+	     The backend runs correctly on 3.9.6, but prefer a real interpreter when one
+	     is installed, and keep /usr/bin as the fallback. -->
+	<key>LSEnvironment</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/Library/Frameworks/Python.framework/Versions/Current/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<!-- The backend lives inside the signed bundle. Python would otherwise write
+		     __pycache__ next to it on import, mutating a sealed resource and
+		     invalidating the code signature. -->
+		<key>PYTHONDONTWRITEBYTECODE</key>
+		<string>1</string>
+	</dict>
+
+	<!-- macOS 15+ Local Network privacy. AirPort base stations are discovered
+	     over Bonjour and configured over ACP on TCP 5009, both of which count
+	     as local network access. Without these keys the TCC prompt never
+	     appears and discovery silently returns no devices. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>AirPort Utility needs local network access to discover AirPort base stations and Time Capsules on your network and to read or change their settings.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_airport._tcp</string>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,142 @@
+name: Release macOS app
+
+# Builds, signs, notarizes and staples "AirPort Utility.app", then attaches the
+# zip to a GitHub release.
+#
+# Required repository secrets:
+#   MACOS_CERTIFICATE       base64 of the "Developer ID Application" .p12
+#                           (base64 -i cert.p12 | pbcopy)
+#   MACOS_CERTIFICATE_PWD   password used when exporting that .p12
+#   KEYCHAIN_PASSWORD       any throwaway string; unlocks the temp keychain
+#   NOTARY_APPLE_ID         Apple ID used for notarization
+#   NOTARY_TEAM_ID          10-character Developer Team ID
+#   NOTARY_PASSWORD         app-specific password for that Apple ID
+# Optional:
+#   BUNDLE_ID               overrides the bundle identifier
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (e.g. 0.1.0)"
+        required: true
+        default: "0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinning a specific Xcode is wrong here: the project uses concurrency
+      # features that Swift 6.0 (Xcode 16) rejects, so pick the newest toolchain
+      # the runner provides rather than an arbitrary one.
+      - name: Select the newest Xcode on the runner
+        run: |
+          echo "Available:"
+          ls -d /Applications/Xcode*.app
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Selecting $LATEST"
+          sudo xcode-select -s "$LATEST"
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          python3 --version
+
+      - name: Run tests
+        run: |
+          swift test
+          python3 -m unittest Tests/BackendPythonTests/test_backend_modules.py
+
+      - name: Derive version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building version $VERSION"
+
+      - name: Import Developer ID certificate
+        if: ${{ secrets.MACOS_CERTIFICATE != '' }}
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          KEYCHAIN="$RUNNER_TEMP/app-signing.keychain-db"
+
+          echo -n "$MACOS_CERTIFICATE" | base64 --decode -o "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$CERT_PATH" -P "$MACOS_CERTIFICATE_PWD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          # Without this, codesign blocks on a UI prompt for keychain access.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+
+          rm -f "$CERT_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+
+      - name: Build, sign, notarize and staple
+        if: ${{ secrets.MACOS_CERTIFICATE != '' }}
+        env:
+          MARKETING_VERSION: ${{ steps.version.outputs.version }}
+          CURRENT_PROJECT_VERSION: ${{ github.run_number }}
+          BUNDLE_ID: ${{ secrets.BUNDLE_ID || 'io.github.jackhumphries.airport-utility' }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: ./make-app.sh --sign --notarize --zip
+
+      - name: Verify the shipped bundle
+        if: ${{ secrets.MACOS_CERTIFICATE != '' }}
+        run: |
+          set -euo pipefail
+          APP="dist/AirPort Utility.app"
+          echo "--- architectures ---"
+          lipo -archs "$APP/Contents/MacOS/AirPort Utility"
+          echo "--- signature ---"
+          codesign --verify --strict --verbose=2 "$APP"
+          echo "--- stapled ticket ---"
+          xcrun stapler validate "$APP"
+          echo "--- gatekeeper ---"
+          spctl --assess --type exec --verbose=2 "$APP"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ secrets.MACOS_CERTIFICATE != '' }}
+        with:
+          name: AirPort-Utility-${{ steps.version.outputs.version }}
+          path: dist/*.zip
+
+      - name: Publish release
+        if: ${{ github.event_name == 'push' && secrets.MACOS_CERTIFICATE != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
+
+      - name: Note that signing was skipped
+        if: ${{ secrets.MACOS_CERTIFICATE == '' }}
+        run: |
+          echo "::notice::Built and tested only. Signing, notarization and"\
+            " release publishing were skipped because the signing secrets are"\
+            " not configured for this repository."
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true

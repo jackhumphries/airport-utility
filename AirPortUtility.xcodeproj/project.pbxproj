@@ -1,0 +1,286 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1A0000000000000000000011 /* AirPortUtilityApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000010 /* AirPortUtilityApp.swift */; };
+		1A0000000000000000000013 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000012 /* AppIcon.icns */; };
+		1A0000000000000000000018 /* AirPortUtilityCore in Frameworks */ = {isa = PBXBuildFile; productRef = 1A0000000000000000000017 /* AirPortUtilityCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1A0000000000000000000005 /* AirPort Utility.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AirPort Utility.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A0000000000000000000010 /* AirPortUtilityApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPortUtilityApp.swift; sourceTree = "<group>"; };
+		1A0000000000000000000012 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		1A0000000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1A0000000000000000000015 /* AirPortUtility.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AirPortUtility.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1A0000000000000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A0000000000000000000018 /* AirPortUtilityCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1A0000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				1A0000000000000000000019 /* AirPortUtilityApp */,
+				1A000000000000000000001A /* Packaging */,
+				1A0000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1A0000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1A0000000000000000000005 /* AirPort Utility.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1A0000000000000000000019 /* AirPortUtilityApp */ = {
+			isa = PBXGroup;
+			children = (
+				1A0000000000000000000010 /* AirPortUtilityApp.swift */,
+			);
+			name = AirPortUtilityApp;
+			path = Sources/AirPortUtilityApp;
+			sourceTree = "<group>";
+		};
+		1A000000000000000000001A /* Packaging */ = {
+			isa = PBXGroup;
+			children = (
+				1A0000000000000000000012 /* AppIcon.icns */,
+				1A0000000000000000000014 /* Info.plist */,
+				1A0000000000000000000015 /* AirPortUtility.entitlements */,
+			);
+			path = Packaging;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1A0000000000000000000004 /* AirPort Utility App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A000000000000000000000B /* Build configuration list for PBXNativeTarget "AirPort Utility App" */;
+			buildPhases = (
+				1A0000000000000000000006 /* Sources */,
+				1A0000000000000000000007 /* Frameworks */,
+				1A0000000000000000000008 /* Resources */,
+				1A0000000000000000000009 /* Embed Python backend */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "AirPort Utility App";
+			packageProductDependencies = (
+				1A0000000000000000000017 /* AirPortUtilityCore */,
+			);
+			productName = "AirPort Utility App";
+			productReference = 1A0000000000000000000005 /* AirPort Utility.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1A0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					1A0000000000000000000004 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 1A000000000000000000000A /* Build configuration list for PBXProject "AirPortUtility" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 1A0000000000000000000002;
+			packageReferences = (
+				1A0000000000000000000016 /* XCLocalSwiftPackageReference "." */,
+			);
+			productRefGroup = 1A0000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1A0000000000000000000004 /* AirPort Utility App */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A0000000000000000000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A0000000000000000000013 /* AppIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		1A0000000000000000000009 /* Embed Python backend */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed Python backend";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n# The backend must land in Resources, not MacOS: codesign treats everything in\n# Contents/MacOS as code and rejects non-Mach-O files there.\n# __pycache__ is excluded so stale bytecode is never sealed into the signature.\nDEST=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/backend\"\nrm -rf \"$DEST\"\nmkdir -p \"$DEST\"\nfor f in \"$SRCROOT\"/backend/*.py; do\n  cp \"$f\" \"$DEST/\"\ndone\nchmod +x \"$DEST/airport_backend.py\"\n\n# Bump the bundle mtime so Finder and LaunchServices re-read it instead of\n# serving a stale cached icon after the artwork changes.\ntouch \"$TARGET_BUILD_DIR/$WRAPPER_NAME\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1A0000000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A0000000000000000000011 /* AirPortUtilityApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1A000000000000000000000C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		1A000000000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		1A000000000000000000000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Packaging/AirPortUtility.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Packaging/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.jackhumphries.airport-utility;
+				PRODUCT_NAME = "AirPort Utility";
+			};
+			name = Debug;
+		};
+		1A000000000000000000000F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Packaging/AirPortUtility.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Packaging/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.jackhumphries.airport-utility;
+				PRODUCT_NAME = "AirPort Utility";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1A000000000000000000000A /* Build configuration list for PBXProject "AirPortUtility" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A000000000000000000000C /* Debug */,
+				1A000000000000000000000D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1A000000000000000000000B /* Build configuration list for PBXNativeTarget "AirPort Utility App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A000000000000000000000E /* Debug */,
+				1A000000000000000000000F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		1A0000000000000000000016 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1A0000000000000000000017 /* AirPortUtilityCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AirPortUtilityCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 1A0000000000000000000001 /* Project object */;
+}

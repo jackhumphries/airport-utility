@@ -8,12 +8,12 @@ struct ModemOptionsSheet: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
-      Text("Modem Options")
+      Text(localized("Modem Options"))
         .font(.system(size: 13, weight: .semibold))
       Divider()
 
       if model.showsModemControls {
-        modemRow("Disconnect if Idle:") {
+        modemRow(localized("Disconnect if Idle:")) {
           Picker("", selection: $draft.modemIdleSeconds) {
             ForEach(ModemIdleOption.allCases) { option in
               Text(option.label).tag(option.seconds)
@@ -23,7 +23,7 @@ struct ModemOptionsSheet: View {
           .pickerStyle(.menu)
           .accessibilityIdentifier("internet.modem.options.idle")
         }
-        modemRow("Country Code:") {
+        modemRow(localized("Country Code:")) {
           Picker("", selection: $draft.modemCountryCode) {
             ForEach(ModemCountryOption.allCases) { option in
               Text(option.name).tag(option.code)
@@ -33,7 +33,7 @@ struct ModemOptionsSheet: View {
           .pickerStyle(.menu)
           .accessibilityIdentifier("internet.modem.options.country")
         }
-        modemRow("Protocol:") {
+        modemRow(localized("Protocol:")) {
           Picker("", selection: $draft.modemProtocol) {
             Text("v.34").tag("v34")
             Text("v.90").tag("v90")
@@ -42,10 +42,10 @@ struct ModemOptionsSheet: View {
           .pickerStyle(.menu)
           .accessibilityIdentifier("internet.modem.options.protocol")
         }
-        modemRow("Dialing:") {
+        modemRow(localized("Dialing:")) {
           Picker("", selection: $draft.modemPulseDialing) {
-            Text("Tone").tag(false)
-            Text("Pulse").tag(true)
+            Text(localized("Tone")).tag(false)
+            Text(localized("Pulse")).tag(true)
           }
           .labelsHidden()
           .pickerStyle(.menu)
@@ -54,25 +54,25 @@ struct ModemOptionsSheet: View {
 
         VStack(alignment: .leading, spacing: 10) {
           InternetOptionsCheckbox(
-            "Automatically Dial",
+            localized("Automatically Dial"),
             isOn: $draft.modemAutomaticallyDial,
             identifier: "internet.modem.options.automatically.dial")
           InternetOptionsCheckbox(
-            "Ignore Dial Tone",
+            localized("Ignore Dial Tone"),
             isOn: $draft.modemIgnoreDialTone,
             identifier: "internet.modem.options.ignore.dial.tone")
         }
         .padding(.leading, 164)
       } else {
-        Text("This base station does not support modem options.")
+        Text(localized("This base station does not support modem options."))
       }
 
       Spacer()
       HStack {
         Spacer()
-        Button("Cancel") { dismiss() }
+        Button(localized("Cancel")) { dismiss() }
           .accessibilityIdentifier("internet.modem.options.cancel")
-        Button("Save") {
+        Button(localized("Save")) {
           model.internet = draft
           dismiss()
         }

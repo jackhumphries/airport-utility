@@ -5,7 +5,7 @@ import SwiftUI
 public final class AirportAppModel: ObservableObject {
   @Published var connection = AirportConnection()
   @Published var selectedPane: Pane = .baseStation
-  @Published var status = "Not connected"
+  @Published var status = localized("Not connected")
   @Published var isBusy = false
   @Published var logs: [String] = []
   @Published var preview: CommandPreview?
@@ -279,9 +279,9 @@ public final class AirportAppModel: ObservableObject {
     if mockMode {
       loadMockState()
     } else if liveCredentialsAvailable {
-      status = "Ready to connect to \(connection.host)"
+      status = localizedFormat("Ready to connect to %@", connection.host)
     } else {
-      status = "Enter base station password to load settings."
+      status = localized("Enter base station password to load settings.")
     }
   }
 
@@ -297,7 +297,7 @@ public final class AirportAppModel: ObservableObject {
       hasTrustedConnectionPassword = true
     }
     let requestHost = AirportConnection.normalizedHost(connection.host)
-    runTask("Refreshing settings", requestHost: requestHost) {
+    runTask(localized("Refreshing settings"), requestHost: requestHost) {
       try await self.refreshSettings()
     }
   }
@@ -306,27 +306,27 @@ public final class AirportAppModel: ObservableObject {
     let connection = connection
     let name = baseStation.name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !name.isEmpty else {
-      status = "Base Station Name cannot be empty."
+      status = localized("Base Station Name cannot be empty.")
       clearPreviewAfterValidationFailure()
       return
     }
     let args = AirportCommand.rawWrite(
       setting: "syNm", value: name, connection: connection, dryRun: true)
-    dryRun(title: "Base Station Name", args: args, connection: connection)
+    dryRun(title: localized("Base Station Name"), args: args, connection: connection)
   }
 
   func applyBaseStationName() {
     let connection = connection
     let name = baseStation.name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !name.isEmpty else {
-      status = "Base Station Name cannot be empty."
+      status = localized("Base Station Name cannot be empty.")
       clearPreviewAfterValidationFailure()
       return
     }
     let args = appliedWriteArguments(
       AirportCommand.rawWrite(setting: "syNm", value: name, connection: connection, dryRun: false))
     apply(
-      title: "Base Station Name", args: args, connection: connection,
+      title: localized("Base Station Name"), args: args, connection: connection,
       cleanScope: .baseStationName)
   }
 
@@ -338,13 +338,13 @@ public final class AirportAppModel: ObservableObject {
     guard !newPassword.isEmpty,
       newPassword == verifyPassword
     else {
-      status = "Admin passwords do not match."
+      status = localized("Admin passwords do not match.")
       clearPreviewAfterValidationFailure()
       return
     }
     let args = AirportCommand.rawWrite(
       setting: "syPW", value: newPassword, connection: connection, dryRun: true)
-    dryRun(title: "Admin Password", args: args, connection: connection)
+    dryRun(title: localized("Admin Password"), args: args, connection: connection)
   }
 
   func applyAdminPassword() {
@@ -355,7 +355,7 @@ public final class AirportAppModel: ObservableObject {
     guard !newPassword.isEmpty,
       newPassword == verifyPassword
     else {
-      status = "Admin passwords do not match."
+      status = localized("Admin passwords do not match.")
       clearPreviewAfterValidationFailure()
       return
     }
@@ -363,7 +363,7 @@ public final class AirportAppModel: ObservableObject {
       AirportCommand.rawWrite(
         setting: "syPW", value: newPassword, connection: connection, dryRun: false))
     apply(
-      title: "Admin Password", args: args, connection: connection, cleanScope: .adminPassword,
+      title: localized("Admin Password"), args: args, connection: connection, cleanScope: .adminPassword,
       appliedAdminPassword: newPassword
     ) {
       self.updateConnectionPasswordAfterAdminChange(newPassword)
@@ -379,7 +379,7 @@ public final class AirportAppModel: ObservableObject {
     }
     guard !commands.isEmpty else {
       preview = nil
-      status = "No pending Base Station changes to preview."
+      status = localized("No pending Base Station changes to preview.")
       return
     }
     dryRunSequence(title: "Base Station", commands: commands, connection: connection)
@@ -393,7 +393,7 @@ public final class AirportAppModel: ObservableObject {
     }
     guard !commands.isEmpty else {
       preview = nil
-      status = "No pending Base Station changes to apply."
+      status = localized("No pending Base Station changes to apply.")
       return
     }
     let newPassword = baseStation.newAdminPassword.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -412,7 +412,7 @@ public final class AirportAppModel: ObservableObject {
   func previewInternet() {
     previewFriendlySettings(
       title: "Internet",
-      noChangesStatus: "No pending Internet changes to preview."
+      noChangesStatus: localized("No pending Internet changes to preview.")
     ) {
       internetFlags(changesOnly: true)
     }
@@ -421,7 +421,7 @@ public final class AirportAppModel: ObservableObject {
   func applyInternet() {
     applyFriendlySettings(
       title: "Internet",
-      noChangesStatus: "No pending Internet changes to apply.",
+      noChangesStatus: localized("No pending Internet changes to apply."),
       cleanScope: .internet
     ) {
       internetFlags(changesOnly: true)
@@ -486,7 +486,7 @@ public final class AirportAppModel: ObservableObject {
   func previewWireless() {
     previewFriendlySettings(
       title: "Wireless",
-      noChangesStatus: "No pending Wireless changes to preview."
+      noChangesStatus: localized("No pending Wireless changes to preview.")
     ) {
       wirelessFlags(changesOnly: true)
     }
@@ -495,7 +495,7 @@ public final class AirportAppModel: ObservableObject {
   func applyWireless() {
     applyFriendlySettings(
       title: "Wireless",
-      noChangesStatus: "No pending Wireless changes to apply.",
+      noChangesStatus: localized("No pending Wireless changes to apply."),
       cleanScope: .wireless
     ) {
       wirelessFlags(changesOnly: true)
@@ -505,7 +505,7 @@ public final class AirportAppModel: ObservableObject {
   func previewNetwork() {
     previewFriendlySettings(
       title: "Network",
-      noChangesStatus: "No pending Network changes to preview."
+      noChangesStatus: localized("No pending Network changes to preview.")
     ) {
       networkFlags(changesOnly: true)
     }
@@ -514,7 +514,7 @@ public final class AirportAppModel: ObservableObject {
   func applyNetwork() {
     applyFriendlySettings(
       title: "Network",
-      noChangesStatus: "No pending Network changes to apply.",
+      noChangesStatus: localized("No pending Network changes to apply."),
       cleanScope: .network
     ) {
       networkFlags(changesOnly: true)
@@ -523,13 +523,13 @@ public final class AirportAppModel: ObservableObject {
 
   func previewAirPlay() {
     guard supportsPane(.airPlay) else {
-      status = "This base station does not support AirPlay."
+      status = localized("This base station does not support AirPlay.")
       clearPreviewAfterValidationFailure()
       return
     }
     previewFriendlySettings(
       title: "AirPlay",
-      noChangesStatus: "No pending AirPlay changes to preview."
+      noChangesStatus: localized("No pending AirPlay changes to preview.")
     ) {
       airPlayFlags(changesOnly: true)
     }
@@ -537,13 +537,13 @@ public final class AirportAppModel: ObservableObject {
 
   func applyAirPlay() {
     guard supportsPane(.airPlay) else {
-      status = "This base station does not support AirPlay."
+      status = localized("This base station does not support AirPlay.")
       clearPreviewAfterValidationFailure()
       return
     }
     applyFriendlySettings(
       title: "AirPlay",
-      noChangesStatus: "No pending AirPlay changes to apply.",
+      noChangesStatus: localized("No pending AirPlay changes to apply."),
       cleanScope: .airPlay,
       completion: { self.persistAuxiliaryPasswordPreferences(from: $0) }
     ) {
@@ -577,7 +577,7 @@ public final class AirportAppModel: ObservableObject {
     let snapshot = currentSnapshot
     guard comparable(snapshot) != comparable(cleanSnapshot) else {
       preview = nil
-      status = "No pending changes to apply."
+      status = localized("No pending changes to apply.")
       return
     }
     var commands: [(String, [String])] = []
@@ -593,7 +593,7 @@ public final class AirportAppModel: ObservableObject {
         return
       }
       for command in baseCommands {
-        if command.0 == "Admin Password" {
+        if command.0 == localized("Admin Password") {
           finalCommands.append(command)
         } else {
           commands.append(command)
@@ -667,7 +667,7 @@ public final class AirportAppModel: ObservableObject {
       if !flags.isEmpty {
         commands.append(
           (
-            "Disk Sharing",
+            localized("Disk Sharing"),
             AirportCommand.friendlyWrite(connection: connection, flags: flags, dryRun: false)
           ))
       }
@@ -698,14 +698,14 @@ public final class AirportAppModel: ObservableObject {
         clearPreviewAfterValidationFailure()
         return
       }
-      commandsForApply = [("Settings", combined)]
+      commandsForApply = [(localized("Settings"), combined)]
     } else {
       commandsForApply = pendingCommands
     }
     let orderedCommands = appliedFinalCommand(commandsForApply)
     guard !orderedCommands.isEmpty else {
       preview = nil
-      status = "No pending changes to apply."
+      status = localized("No pending changes to apply.")
       return
     }
     guard mockMode || liveCredentialsAvailable else {
@@ -715,7 +715,7 @@ public final class AirportAppModel: ObservableObject {
       return
     }
     applySequence(
-      title: "Settings", commands: orderedCommands, connection: connection, cleanScope: .all,
+      title: localized("Settings"), commands: orderedCommands, connection: connection, cleanScope: .all,
       appliedSnapshot: snapshot,
       appliedAdminPassword: adminPassword
     ) {
@@ -739,7 +739,7 @@ public final class AirportAppModel: ObservableObject {
       guard let passwordFlag = arguments.firstIndex(of: "--password"),
         arguments.indices.contains(passwordFlag + 1)
       else {
-        status = "Could not combine legacy settings into one update."
+        status = localized("Could not combine legacy settings into one update.")
         return nil
       }
       let payloadStart = passwordFlag + 2
@@ -773,7 +773,7 @@ public final class AirportAppModel: ObservableObject {
         let data = try? JSONSerialization.data(withJSONObject: values, options: [.sortedKeys]),
         let json = String(data: data, encoding: .utf8)
       else {
-        status = "Could not encode the combined legacy settings update."
+        status = localized("Could not encode the combined legacy settings update.")
         return nil
       }
       arguments += ["--values-json", json]
@@ -937,13 +937,13 @@ public final class AirportAppModel: ObservableObject {
 
   func updateIdleConnectionStatus() {
     if mockMode {
-      status = "Connected to \(connection.host). Mock mode."
+      status = localizedFormat("Connected to %@. Mock mode.", connection.host)
       return
     }
     status =
       liveCredentialsAvailable
-      ? "Ready to connect to \(connection.host)"
-      : "Enter base station password to load settings."
+      ? localizedFormat("Ready to connect to %@", connection.host)
+      : localized("Enter base station password to load settings.")
   }
 
   nonisolated static func uniqueNonEmptyValues(_ values: [String]) -> [String] {
@@ -1096,26 +1096,10 @@ public final class AirportAppModel: ObservableObject {
       rememberPassword: true,
       windowsWorkgroup: "WORKGROUP",
       winsServer: "",
-      inventory: [
-        DiskRecord(
-          deviceName: "dk2",
-          name: "Jack's Time Capsule Home",
-          format: "HFS",
-          uuid: "adabbc6e09e0579081f8444e687f35b9",
-          size: 1_000_000_000_000,
-          sizeFree: 497_850_000_000,
-          builtIn: true
-        ),
-        DiskRecord(
-          deviceName: "dk3",
-          name: "USB Archive Disk",
-          format: "HFS",
-          uuid: "22222222222222222222222222222222",
-          size: 2_000_000_000_000,
-          sizeFree: 1_500_000_000_000,
-          builtIn: false
-        ),
-      ],
+      // Parsed from the same fixture the mock backend serves, rather than
+      // duplicated as literals: the two drifted, so the pane showed neither the
+      // drive detail nor the used size that the fixture already carried.
+      inventory: AirportMockBackend.diskInventoryRefreshResult.records,
       rawInventory: AirportMockBackend.maStJSON,
       didLoadInventory: true
     )
@@ -1134,9 +1118,9 @@ public final class AirportAppModel: ObservableObject {
     firmware.currentVersion = baseStation.version
     firmware.productID = mockProductID
     loadMockFirmwareImagesIfNeeded(force: true)
-    status = "Connected to \(connection.host). Mock mode."
+    status = localizedFormat("Connected to %@. Mock mode.", connection.host)
     showConnectionDetails = false
-    logs = ["Mock backend enabled with fixture Time Capsule settings."]
+    logs = [localized("Mock backend enabled with fixture Time Capsule settings.")]
     discoveredDevices = AirportMockBackend.discoveredDevices(
       statusText: mockStatusText,
       environmentValue: Self.environmentValue)

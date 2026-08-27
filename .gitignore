@@ -11,3 +11,13 @@ local-artifacts/network-captures/
 *.log
 *.keylog
 DerivedData/
+
+# macOS app bundle build output
+dist/
+build/
+Build/
+*.xcuserdatad
+xcuserdata/
+
+# Local build overrides (bundle identifier, signing team) -- never committed
+Packaging/Local.xcconfig

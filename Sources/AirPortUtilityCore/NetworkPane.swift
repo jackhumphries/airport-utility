@@ -7,7 +7,7 @@ struct NetworkPane: View {
 
   var body: some View {
     PaneBox {
-      FormRow(title: "Router Mode:") {
+      FormRow(title: localized("Router Mode:")) {
         Picker("", selection: $model.network.routerMode) {
           ForEach(RouterMode.allCases) { mode in
             Text(mode.label).tag(mode)
@@ -20,25 +20,25 @@ struct NetworkPane: View {
       if model.network.routerMode == .bridge {
         Spacer().frame(height: 42)
       } else {
-        FormRow(title: "LAN IP Address:") {
+        FormRow(title: localized("LAN IP Address:")) {
           AirPortTextField(
             text: $model.network.lanIPAddress,
-            placeholder: "LAN IP address",
+            placeholder: localized("LAN IP address"),
             identifier: "network.lan.ip.address")
         }
-        FormRow(title: "DHCP Range:") {
+        FormRow(title: localized("DHCP Range:")) {
           DHCPRangeSummary(network: $model.network)
         }
       }
       NetworkTableSection(
-        title: "DHCP Reservations:",
-        columns: ("Description", "IP Address"),
+        title: localized("DHCP Reservations:"),
+        columns: (localized("Description"), localized("IP Address")),
         tableIdentifier: "dhcpTable",
         disabled: model.network.routerMode == .bridge
       )
       NetworkTableSection(
-        title: "Port Settings:",
-        columns: ("Description", "Type"),
+        title: localized("Port Settings:"),
+        columns: (localized("Description"), localized("Type")),
         tableIdentifier: "natTable",
         disabled: model.network.routerMode != .dhcpAndNat
       )
@@ -46,7 +46,7 @@ struct NetworkPane: View {
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         NetworkPaneButton(
-          "Network Options...", identifier: "network.options.open"
+          localized("Network Options..."), identifier: "network.options.open"
         ) { showOptions = true }
           .frame(width: 147, height: 22)
           .disabled(model.network.routerMode == .bridge)
@@ -250,7 +250,7 @@ private struct NetworkTableEditButton: NSViewRepresentable {
   var tableIdentifier: String
 
   func makeNSView(context: Context) -> NSButton {
-    let button = NetworkTableEditNSButton(title: "Edit", target: nil, action: nil)
+    let button = NetworkTableEditNSButton(title: localized("Edit"), target: nil, action: nil)
     button.bezelStyle = .rounded
     button.controlSize = .regular
     button.font = .systemFont(ofSize: 13)
@@ -264,7 +264,7 @@ private struct NetworkTableEditButton: NSViewRepresentable {
   }
 
   private func configure(_ button: NSButton) {
-    button.title = "Edit"
+    button.title = localized("Edit")
     button.target = nil
     button.action = nil
     button.isEnabled = false
@@ -347,8 +347,8 @@ private struct EmptyNetworkTable: NSViewRepresentable {
   private func configure(_ tableView: NSTableView) {
     tableView.tableColumns.forEach { tableView.removeTableColumn($0) }
 
-    let firstWidth: CGFloat = columns.1 == "Type" ? 228 : 156.5
-    let secondWidth: CGFloat = columns.1 == "Type" ? 47 : 118.5
+    let firstWidth: CGFloat = columns.1 == localized("Type") ? 228 : 156.5
+    let secondWidth: CGFloat = columns.1 == localized("Type") ? 47 : 118.5
     for (index, columnTitle) in [columns.0, columns.1].enumerated() {
       let tableColumn = NSTableColumn(
         identifier: NSUserInterfaceItemIdentifier("AutomaticTableColumnIdentifier.\(index)")

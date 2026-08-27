@@ -3,12 +3,26 @@ import Foundation
 
 final class AirPortBonjourBrowser: NSObject {
   private let serviceTypes = ["_airport._tcp."]
+
+  /// File-sharing services a base station publishes when sharing is enabled,
+  /// mapped to the label shown in the device popover.
+  ///
+  /// Presence is all Bonjour reports. It does not advertise an SMB dialect --
+  /// that is negotiated per connection -- so this can say SMB but never SMB2.
+  private static let fileSharingServiceTypes = [
+    "_afpovertcp._tcp.": "AFP",
+    "_smb._tcp.": "SMB",
+  ]
   private static let stableIdentifierTXTKeys = ["wama", "rama", "sysn"]
   private static let knownModelNameFragments = ["express", "time capsule", "extreme"]
   private let onChange: @MainActor ([AirportDiscoveredDevice]) -> Void
   private var browsers: [NetServiceBrowser] = []
   private var services: [String: NetService] = [:]
   private var txtRecords: [String: Data] = [:]
+  /// Lowercased service name -> protocol labels it publishes. A Time Capsule
+  /// publishes its file-sharing services under the device name, so the name is
+  /// what ties them back to the AirPort service.
+  private var fileSharingProtocols: [String: Set<String>] = [:]
 
   init(onChange: @escaping @MainActor ([AirportDiscoveredDevice]) -> Void) {
     self.onChange = onChange
@@ -17,7 +31,7 @@ final class AirPortBonjourBrowser: NSObject {
 
   func start() {
     stop()
-    for serviceType in serviceTypes {
+    for serviceType in serviceTypes + Array(Self.fileSharingServiceTypes.keys) {
       let browser = NetServiceBrowser()
       browser.delegate = self
       browser.searchForServices(ofType: serviceType, inDomain: "local.")
@@ -38,6 +52,7 @@ final class AirPortBonjourBrowser: NSObject {
     }
     services.removeAll()
     txtRecords.removeAll()
+    fileSharingProtocols.removeAll()
     publish()
   }
 
@@ -70,8 +85,16 @@ final class AirPortBonjourBrowser: NSObject {
       identifiers: Self.stableIdentifiers(fromTXTRecord: txtRecord),
       txtFields: txtFields,
       modelName: Self.modelName(fromTXTFields: txtFields),
-      productID: txtFields["syap"] ?? ""
+      productID: txtFields["syap"] ?? "",
+      publishedProtocols: publishedProtocols(forServiceNamed: service.name)
     )
+  }
+
+  /// Protocol labels published under `name`, ordered so the row reads the same
+  /// way every time rather than in set order.
+  private func publishedProtocols(forServiceNamed name: String) -> [String] {
+    let found = fileSharingProtocols[name.lowercased()] ?? []
+    return Self.fileSharingServiceTypes.values.sorted().filter(found.contains)
   }
 
   static func stableIdentifiers(fromTXTRecord txtRecord: [String: Data]) -> [String] {
@@ -166,6 +189,17 @@ extension AirPortBonjourBrowser: NetServiceBrowserDelegate {
   func netServiceBrowser(
     _ browser: NetServiceBrowser, didFind service: NetService, moreComing: Bool
   ) {
+    // A file-sharing service is evidence about a device, not a device. Record
+    // which protocols its name publishes and stop; letting it through would
+    // list every share as its own base station.
+    if let label = Self.fileSharingServiceTypes[service.type] {
+      fileSharingProtocols[service.name.lowercased(), default: []].insert(label)
+      if !moreComing {
+        publish()
+      }
+      return
+    }
+
     let serviceKey = key(for: service)
     if let previousService = services[serviceKey], previousService !== service {
       previousService.stopMonitoring()
@@ -185,6 +219,18 @@ extension AirPortBonjourBrowser: NetServiceBrowserDelegate {
   func netServiceBrowser(
     _ browser: NetServiceBrowser, didRemove service: NetService, moreComing: Bool
   ) {
+    if let label = Self.fileSharingServiceTypes[service.type] {
+      let name = service.name.lowercased()
+      fileSharingProtocols[name]?.remove(label)
+      if fileSharingProtocols[name]?.isEmpty == true {
+        fileSharingProtocols.removeValue(forKey: name)
+      }
+      if !moreComing {
+        publish()
+      }
+      return
+    }
+
     let serviceKey = key(for: service)
     guard let storedService = services[serviceKey], storedService === service else { return }
     services.removeValue(forKey: serviceKey)

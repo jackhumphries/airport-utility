@@ -6,6 +6,10 @@ private enum AdvancedPaneSection: String, CaseIterable, Identifiable {
   case accessControl = "Access Control"
 
   var id: String { rawValue }
+
+  /// Localized section title. `rawValue` stays English because it is the
+  /// enum's identity, and a raw value must be a compile-time literal.
+  var displayName: String { localized(rawValue) }
 }
 
 struct AdvancedPane: View {
@@ -30,7 +34,7 @@ struct AdvancedPane: View {
       if visibleSections.count > 1 {
         Picker("", selection: $selectedSection) {
           ForEach(visibleSections) { section in
-            Text(section.rawValue).tag(section)
+            Text(section.displayName).tag(section)
           }
         }
         .pickerStyle(.segmented)
@@ -62,19 +66,19 @@ struct AdvancedPane: View {
 
   @ViewBuilder
   private var loggingSettings: some View {
-    Text("This AirPort wireless device supports log messages that may help diagnose a problem.")
+    Text(localized("This AirPort wireless device supports log messages that may help diagnose a problem."))
       .font(.system(size: 13))
       .foregroundStyle(.secondary)
       .fixedSize(horizontal: false, vertical: true)
       .padding(.horizontal, 12)
 
-    FormRow(title: "Syslog Destination Address:") {
+    FormRow(title: localized("Syslog Destination Address:")) {
       AirPortTextField(
         text: $model.advanced.syslogDestinationAddress,
         identifier: "advanced.logging.syslog.destination")
     }
 
-    FormRow(title: "Syslog Level:") {
+    FormRow(title: localized("Syslog Level:")) {
       Picker("", selection: $model.advanced.syslogLevel) {
         ForEach(SyslogLevelOption.allCases) { option in
           Text(option.label).tag(option.level)
@@ -86,7 +90,7 @@ struct AdvancedPane: View {
     }
 
     Text(
-      "Simple Network Management Protocol (SNMP) allows you to query this device for statistics, including the number of wireless clients."
+      localized("Simple Network Management Protocol (SNMP) allows you to query this device for statistics, including the number of wireless clients.")
     )
     .font(.system(size: 13))
     .foregroundStyle(.secondary)
@@ -95,7 +99,7 @@ struct AdvancedPane: View {
     .padding(.top, 8)
 
     AdvancedCheckbox(
-      "Allow SNMP",
+      localized("Allow SNMP"),
       isOn: $model.advanced.allowSNMP,
       identifier: "advanced.logging.allow.snmp")
       .padding(.leading, AirPortLayout.formControlLeading)
@@ -106,7 +110,7 @@ struct AdvancedPane: View {
       }
 
     AdvancedCheckbox(
-      "Allow SNMP over WAN",
+      localized("Allow SNMP over WAN"),
       isOn: $model.advanced.allowSNMPOverWAN,
       identifier: "advanced.logging.allow.snmp.over.wan")
       .padding(.leading, AirPortLayout.formControlLeading + 20)
@@ -116,36 +120,36 @@ struct AdvancedPane: View {
   @ViewBuilder
   private var pppDialInSettings: some View {
     AdvancedCheckbox(
-      "PPP Dial-in",
+      localized("PPP Dial-in"),
       isOn: $model.advanced.pppDialInEnabled,
       identifier: "advanced.ppp.dial.in.enabled")
       .padding(.leading, AirPortLayout.formControlLeading)
 
     Group {
-      FormRow(title: "Account Name:") {
+      FormRow(title: localized("Account Name:")) {
         AirPortTextField(
           text: $model.advanced.pppDialInAccount,
           identifier: "advanced.ppp.dial.in.account")
       }
-      FormRow(title: "Password:") {
+      FormRow(title: localized("Password:")) {
         AirPortSecureField(
           text: $model.advanced.pppDialInPassword,
           identifier: "advanced.ppp.dial.in.password")
           .frame(height: 24)
       }
-      FormRow(title: "Verify Password:") {
+      FormRow(title: localized("Verify Password:")) {
         AirPortSecureField(
           text: $model.advanced.pppDialInVerifyPassword,
           identifier: "advanced.ppp.dial.in.verify.password")
           .frame(height: 24)
       }
-      FormRow(title: "Answer on ring:") {
+      FormRow(title: localized("Answer on ring:")) {
         TextField("", value: $model.advanced.pppDialInAnswerOnRing, format: .number)
           .textFieldStyle(.plain)
           .airPortField()
           .accessibilityIdentifier("advanced.ppp.dial.in.answer.on.ring")
       }
-      FormRow(title: "Idle Disconnect After:") {
+      FormRow(title: localized("Idle Disconnect After:")) {
         Picker("", selection: $model.advanced.pppDialInIdleSeconds) {
           ForEach(ModemIdleOption.allCases) { option in
             Text(option.label).tag(option.seconds)
@@ -155,7 +159,7 @@ struct AdvancedPane: View {
         .labelsHidden()
         .accessibilityIdentifier("advanced.ppp.dial.in.idle.disconnect")
       }
-      FormRow(title: "Maximum Connect Time:") {
+      FormRow(title: localized("Maximum Connect Time:")) {
         Picker("", selection: $model.advanced.pppDialInMaximumConnectSeconds) {
           ForEach(PPPDialInMaximumConnectOption.allCases) { option in
             Text(option.label).tag(option.seconds)
@@ -171,10 +175,10 @@ struct AdvancedPane: View {
 
   @ViewBuilder
   private var accessControlSettings: some View {
-    FormRow(title: "Access Control:") {
+    FormRow(title: localized("Access Control:")) {
       Picker("", selection: $model.legacyDeviceOptions.accessControl.mode) {
-        Text("Not enabled").tag("not-enabled")
-        Text("Local").tag("local")
+        Text(localized("Not enabled")).tag("not-enabled")
+        Text(localized("Local")).tag("local")
         Text("RADIUS").tag("radius")
       }
       .pickerStyle(.menu)
@@ -188,7 +192,7 @@ struct AdvancedPane: View {
     case "radius":
       radiusAccessControlSettings
     default:
-      Text("All wireless clients are allowed to join this network.")
+      Text(localized("All wireless clients are allowed to join this network."))
         .font(.system(size: 13))
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, alignment: .center)
@@ -198,7 +202,7 @@ struct AdvancedPane: View {
 
   @ViewBuilder
   private var localAccessControlSettings: some View {
-    Text("Allow only the wireless clients listed below.")
+    Text(localized("Allow only the wireless clients listed below."))
       .font(.system(size: 13))
       .foregroundStyle(.secondary)
       .padding(.leading, 12)
@@ -208,7 +212,7 @@ struct AdvancedPane: View {
         ForEach($model.legacyDeviceOptions.accessControl.entries) { $entry in
           VStack(spacing: 8) {
             HStack(spacing: 8) {
-              Text("AirPort ID:")
+              Text(localized("AirPort ID:"))
                 .font(.system(size: 12))
                 .frame(width: 74, alignment: .trailing)
               AirPortTextField(
@@ -223,10 +227,10 @@ struct AdvancedPane: View {
                 Image(systemName: "minus.circle")
               }
               .buttonStyle(.plain)
-              .accessibilityLabel("Remove access-control entry")
+              .accessibilityLabel(localized("Remove access-control entry"))
             }
             HStack(spacing: 8) {
-              Text("Description:")
+              Text(localized("Description:"))
                 .font(.system(size: 12))
                 .frame(width: 74, alignment: .trailing)
               AirPortTextField(
@@ -243,7 +247,7 @@ struct AdvancedPane: View {
     }
     .frame(maxHeight: 260)
 
-    Button("Add Client") {
+    Button(localized("Add Client")) {
       model.legacyDeviceOptions.accessControl.entries.append(AccessControlEntry())
     }
     .accessibilityIdentifier("advanced.access.control.add.client")
@@ -255,33 +259,33 @@ struct AdvancedPane: View {
   private var radiusAccessControlSettings: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 12) {
-        FormRow(title: "RADIUS Type:") {
+        FormRow(title: localized("RADIUS Type:")) {
           Picker("", selection: $model.legacyDeviceOptions.accessControl.radiusType) {
-            Text("Default").tag("default")
-            Text("Alternate").tag("alternate")
+            Text(localized("Default")).tag("default")
+            Text(localized("Alternate")).tag("alternate")
           }
           .pickerStyle(.menu)
           .labelsHidden()
           .accessibilityIdentifier("advanced.access.control.radius.type")
         }
-        FormRow(title: "Primary Server:") {
+        FormRow(title: localized("Primary Server:")) {
           AirPortTextField(
             text: $model.legacyDeviceOptions.accessControl.primaryAddress,
             identifier: "advanced.access.control.radius.primary.address")
         }
-        FormRow(title: "Shared Secret:") {
+        FormRow(title: localized("Shared Secret:")) {
           AirPortSecureField(
             text: $model.legacyDeviceOptions.accessControl.primarySecret,
             identifier: "advanced.access.control.radius.primary.secret")
             .frame(height: 24)
         }
-        FormRow(title: "Verify Secret:") {
+        FormRow(title: localized("Verify Secret:")) {
           AirPortSecureField(
             text: $model.legacyDeviceOptions.accessControl.primaryVerifySecret,
             identifier: "advanced.access.control.radius.primary.verify.secret")
             .frame(height: 24)
         }
-        FormRow(title: "Primary Port:") {
+        FormRow(title: localized("Primary Port:")) {
           TextField(
             "", value: $model.legacyDeviceOptions.accessControl.primaryPort, format: .number
           )
@@ -289,24 +293,24 @@ struct AdvancedPane: View {
           .airPortField()
           .accessibilityIdentifier("advanced.access.control.radius.primary.port")
         }
-        FormRow(title: "Secondary Server:") {
+        FormRow(title: localized("Secondary Server:")) {
           AirPortTextField(
             text: $model.legacyDeviceOptions.accessControl.secondaryAddress,
             identifier: "advanced.access.control.radius.secondary.address")
         }
-        FormRow(title: "Shared Secret:") {
+        FormRow(title: localized("Shared Secret:")) {
           AirPortSecureField(
             text: $model.legacyDeviceOptions.accessControl.secondarySecret,
             identifier: "advanced.access.control.radius.secondary.secret")
             .frame(height: 24)
         }
-        FormRow(title: "Verify Secret:") {
+        FormRow(title: localized("Verify Secret:")) {
           AirPortSecureField(
             text: $model.legacyDeviceOptions.accessControl.secondaryVerifySecret,
             identifier: "advanced.access.control.radius.secondary.verify.secret")
             .frame(height: 24)
         }
-        FormRow(title: "Secondary Port:") {
+        FormRow(title: localized("Secondary Port:")) {
           TextField(
             "", value: $model.legacyDeviceOptions.accessControl.secondaryPort, format: .number
           )

@@ -11,7 +11,7 @@ extension AirportAppModel {
       let lanIPAddress = normalized(network.lanIPAddress)
       if !lanIPAddress.isEmpty {
         guard isIPv4Address(lanIPAddress) else {
-          status = "LAN IP Address must be an IPv4 address."
+          status = localized("LAN IP Address must be an IPv4 address.")
           return nil
         }
         flags.append(("--lan-ip-address", lanIPAddress))
@@ -30,7 +30,7 @@ extension AirportAppModel {
             "second", "seconds", "minute", "minutes", "hour", "hours", "day", "days", "week",
             "weeks",
           ],
-          statusMessage: "DHCP Lease unit is not supported."
+          statusMessage: localized("DHCP Lease unit is not supported.")
         )
       else { return nil }
       let dhcpRangeStartChanged =
@@ -48,19 +48,19 @@ extension AirportAppModel {
       let shouldValidateDHCPLease =
         !changesOnly || routerModeChanged || dhcpLeaseChanged || dhcpLeaseUnitChanged
       guard !shouldValidateDHCPRange || !normalized(network.dhcpRangeStart).isEmpty else {
-        status = "DHCP Range Beginning cannot be empty."
+        status = localized("DHCP Range Beginning cannot be empty.")
         return nil
       }
       guard !shouldValidateDHCPRange || isIPv4Address(network.dhcpRangeStart) else {
-        status = "DHCP Range Beginning must be an IPv4 address."
+        status = localized("DHCP Range Beginning must be an IPv4 address.")
         return nil
       }
       guard !shouldValidateDHCPRange || !normalized(network.dhcpRangeEnd).isEmpty else {
-        status = "DHCP Range Ending cannot be empty."
+        status = localized("DHCP Range Ending cannot be empty.")
         return nil
       }
       guard !shouldValidateDHCPRange || isIPv4Address(network.dhcpRangeEnd) else {
-        status = "DHCP Range Ending must be an IPv4 address."
+        status = localized("DHCP Range Ending must be an IPv4 address.")
         return nil
       }
       guard
@@ -68,22 +68,22 @@ extension AirportAppModel {
           || DHCPRangeFields.fields(start: network.dhcpRangeStart, end: network.dhcpRangeEnd) != nil
       else {
         status =
-          "DHCP Range Beginning and Ending must use the same supported private subnet, with Ending not before Beginning."
+          localized("DHCP Range Beginning and Ending must use the same supported private subnet, with Ending not before Beginning.")
         return nil
       }
       guard !shouldValidateDHCPLease || !normalized(network.dhcpLease).isEmpty else {
-        status = "DHCP Lease cannot be empty."
+        status = localized("DHCP Lease cannot be empty.")
         return nil
       }
       guard !shouldValidateDHCPLease || isPositiveInteger(network.dhcpLease) else {
-        status = "DHCP Lease must be a positive number."
+        status = localized("DHCP Lease must be a positive number.")
         return nil
       }
       guard
         !shouldValidateDHCPLease
           || isSupportedDHCPLeaseDuration(value: network.dhcpLease, unit: network.dhcpLeaseUnit)
       else {
-        status = "DHCP Lease duration must be between 1 second and 10 years."
+        status = localized("DHCP Lease duration must be between 1 second and 10 years.")
         return nil
       }
       appendChanged(
@@ -128,7 +128,7 @@ extension AirportAppModel {
           flags.append(("--clear-default-host", nil))
         } else {
           guard isIPv4Address(defaultHost) else {
-            status = "Default Host must be an IPv4 address."
+            status = localized("Default Host must be an IPv4 address.")
             return nil
           }
           flags.append(("--default-host", defaultHost))
@@ -140,7 +140,7 @@ extension AirportAppModel {
 
   func airPlayFlags(changesOnly: Bool = false) -> [(String, String?)]? {
     guard supportsPane(.airPlay) else {
-      status = "This base station does not support AirPlay."
+      status = localized("This base station does not support AirPlay.")
       return nil
     }
 
@@ -157,11 +157,11 @@ extension AirportAppModel {
       airPlay.enabled && (!changesOnly || enabledChanged || passwordChanged)
 
     guard !shouldValidateName || !speakerName.isEmpty else {
-      status = "AirPlay Speaker Name cannot be empty."
+      status = localized("AirPlay Speaker Name cannot be empty.")
       return nil
     }
     guard !shouldValidatePassword || speakerPassword == verifySpeakerPassword else {
-      status = "AirPlay passwords do not match."
+      status = localized("AirPlay passwords do not match.")
       return nil
     }
 
@@ -211,7 +211,7 @@ extension AirportAppModel {
         cleanValue: cleanSnapshot.disks.secureSharedDisks,
         changesOnly: changesOnly,
         allowed: ["accounts", "disk-password", "device-password"],
-        statusMessage: "Secure Shared Disks mode is not supported."
+        statusMessage: localized("Secure Shared Disks mode is not supported.")
       )
     else { return nil }
     guard
@@ -220,7 +220,7 @@ extension AirportAppModel {
         cleanValue: cleanSnapshot.disks.guestAccess,
         changesOnly: changesOnly,
         allowed: ["not-allowed", "read-only", "read-write"],
-        statusMessage: "Guest Disk Access is not supported."
+        statusMessage: localized("Guest Disk Access is not supported.")
       )
     else { return nil }
     if diskSecurity == "disk-password" {
@@ -230,11 +230,11 @@ extension AirportAppModel {
       let diskSecurityChanged = diskSecurity != cleanDiskSecurity
       let diskPasswordChanged = diskPassword != cleanDiskPassword
       guard !(diskSecurityChanged || diskPasswordChanged) || !diskPassword.isEmpty else {
-        status = "Disk Password cannot be empty."
+        status = localized("Disk Password cannot be empty.")
         return nil
       }
       guard diskPassword.isEmpty || diskPassword == verifyDiskPassword else {
-        status = "Disk passwords do not match."
+        status = localized("Disk passwords do not match.")
         return nil
       }
     }
@@ -269,7 +269,7 @@ extension AirportAppModel {
       && !normalized(disks.winsServer).isEmpty
       && !isIPv4Address(disks.winsServer)
     {
-      status = "WINS Server must be an IPv4 address."
+      status = localized("WINS Server must be an IPv4 address.")
       return nil
     }
     appendChanged(
@@ -295,15 +295,15 @@ extension AirportAppModel {
     }
     for account in accounts {
       guard !account.password.isEmpty else {
-        status = "Account Password cannot be empty."
+        status = localized("Account Password cannot be empty.")
         return false
       }
       guard account.password == account.verifyPassword else {
-        status = "Account passwords do not match."
+        status = localized("Account passwords do not match.")
         return false
       }
       guard diskAccountAccessValue(account.access) != nil else {
-        status = "File Sharing Access must be read-write, read-only, or not-allowed."
+        status = localized("File Sharing Access must be read-write, read-only, or not-allowed.")
         return false
       }
     }
@@ -355,7 +355,7 @@ extension AirportAppModel {
       let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]),
       let text = String(data: data, encoding: .utf8)
     else {
-      status = "Could not encode disk account settings."
+      status = localized("Could not encode disk account settings.")
       return nil
     }
     return text
@@ -366,14 +366,14 @@ extension AirportAppModel {
     let cleanName = cleanSnapshot.baseStation.name.trimmingCharacters(in: .whitespacesAndNewlines)
     let nameChanged = name != cleanName
     guard changesOnly && !nameChanged || !name.isEmpty else {
-      status = "Base Station Name cannot be empty."
+      status = localized("Base Station Name cannot be empty.")
       return nil
     }
     let newPassword = baseStation.newAdminPassword.trimmingCharacters(in: .whitespacesAndNewlines)
     let verifyPassword = baseStation.verifyAdminPassword.trimmingCharacters(
       in: .whitespacesAndNewlines)
     guard newPassword.isEmpty || newPassword == verifyPassword else {
-      status = "Admin passwords do not match."
+      status = localized("Admin passwords do not match.")
       return nil
     }
     let adminPasswordChanged = newPassword != normalized(cleanSnapshot.baseStation.newAdminPassword)
@@ -389,7 +389,7 @@ extension AirportAppModel {
     if !changesOnly || nameChanged || includesLegacyAdvancedACPWrite {
       commands.append(
         (
-          "Base Station Name",
+          localized("Base Station Name"),
           AirportCommand.rawWrite(
             setting: "syNm", value: name, connection: connection, dryRun: dryRun)
         ))
@@ -397,7 +397,7 @@ extension AirportAppModel {
     if adminPasswordChanged {
       commands.append(
         (
-          "Admin Password",
+          localized("Admin Password"),
           AirportCommand.rawWrite(
             setting: "syPW", value: newPassword, connection: connection, dryRun: dryRun)
         ))
@@ -407,7 +407,7 @@ extension AirportAppModel {
         baseStation.allowSetupOverWAN ? "--allow-setup-over-wan" : "--no-allow-setup-over-wan"
       commands.append(
         (
-          "Setup Over Ethernet WAN",
+          localized("Setup Over Ethernet WAN"),
           AirportCommand.friendlyWrite(
             connection: connection, flags: [(flag, nil)], dryRun: dryRun)
         ))
@@ -419,7 +419,7 @@ extension AirportAppModel {
       cleanOptions.setTimeAutomatically ? normalized(cleanOptions.timeServer) : ""
     let effectiveTimeServer = options.setTimeAutomatically ? timeServer : ""
     guard !options.setTimeAutomatically || !timeServer.isEmpty else {
-      status = "Time Server cannot be empty when automatic time is enabled."
+      status = localized("Time Server cannot be empty when automatic time is enabled.")
       return nil
     }
     var flags: [(String, String?)] = []
@@ -437,7 +437,7 @@ extension AirportAppModel {
     if !flags.isEmpty {
       commands.append(
         (
-          "Base Station Options",
+          localized("Base Station Options"),
           AirportCommand.friendlyWrite(
             connection: connection, flags: flags, dryRun: dryRun)
         ))
@@ -459,24 +459,24 @@ extension AirportAppModel {
 
   private func advancedACPSettings(from text: String) -> [String: String]? {
     guard let data = text.data(using: .utf8) else {
-      status = "Advanced ACP JSON must be valid UTF-8."
+      status = localized("Advanced ACP JSON must be valid UTF-8.")
       return nil
     }
     let object: Any
     do {
       object = try JSONSerialization.jsonObject(with: data)
     } catch {
-      status = "Advanced ACP JSON is not valid JSON."
+      status = localized("Advanced ACP JSON is not valid JSON.")
       return nil
     }
     guard let dictionary = object as? [String: Any] else {
-      status = "Advanced ACP JSON must be an object keyed by setting name."
+      status = localized("Advanced ACP JSON must be an object keyed by setting name.")
       return nil
     }
     var settings: [String: String] = [:]
     for (setting, value) in dictionary {
       guard setting.count == 4 else {
-        status = "Advanced ACP setting names must be four characters."
+        status = localized("Advanced ACP setting names must be four characters.")
         return nil
       }
       guard JSONSerialization.isValidJSONObject(value),

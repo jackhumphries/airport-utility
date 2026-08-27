@@ -3,8 +3,8 @@ import Foundation
 extension AirportAppModel {
   func previewDiskSharing() {
     previewFriendlySettings(
-      title: "Disk Sharing",
-      noChangesStatus: "No pending Disk Sharing changes to preview."
+      title: localized("Disk Sharing"),
+      noChangesStatus: localized("No pending Disk Sharing changes to preview.")
     ) {
       diskSharingFlags(changesOnly: true)
     }
@@ -12,8 +12,8 @@ extension AirportAppModel {
 
   func applyDiskSharing() {
     applyFriendlySettings(
-      title: "Disk Sharing",
-      noChangesStatus: "No pending Disk Sharing changes to apply.",
+      title: localized("Disk Sharing"),
+      noChangesStatus: localized("No pending Disk Sharing changes to apply."),
       cleanScope: .disks,
       completion: { self.persistAuxiliaryPasswordPreferences(from: $0) }
     ) {
@@ -24,7 +24,7 @@ extension AirportAppModel {
   func dryRunErase(method: EraseMethod, volumeName: String? = nil) {
     let connection = connection
     dryRun(
-      title: "Erase Disk",
+      title: localized("Erase Disk"),
       args: AirportCommand.eraseDisk(
         connection: connection, method: method, volumeName: volumeName,
         partitionUUID: selectedEraseDiskUUID(),
@@ -36,7 +36,7 @@ extension AirportAppModel {
   func applyErase(method: EraseMethod, volumeName: String? = nil) {
     let connection = connection
     apply(
-      title: "Erase Disk",
+      title: localized("Erase Disk"),
       args: AirportCommand.eraseDisk(
         connection: connection, method: method, volumeName: volumeName,
         partitionUUID: selectedEraseDiskUUID(),
@@ -50,7 +50,7 @@ extension AirportAppModel {
   func dryRunArchive(name: String) {
     let connection = connection
     dryRun(
-      title: "Archive Disk",
+      title: localized("Archive Disk"),
       args: AirportCommand.archiveDisk(
         connection: connection, archiveName: name, confirmed: false, dryRun: true),
       connection: connection)
@@ -63,7 +63,7 @@ extension AirportAppModel {
     applyArchive(args: args, connection: connection)
   }
 
-  private static let eraseDiskWarningMessage = "All users will be disconnected from this disk."
+  private static let eraseDiskWarningMessage = localized("All users will be disconnected from this disk.")
   private static let archiveStatusACPSettings = ["sySt"]
   private static let archiveCompletionPollIntervalNanoseconds: UInt64 = 15_000_000_000
   private static let archiveCompletionPollLimit = 5_760
@@ -140,7 +140,7 @@ extension AirportAppModel {
   private func applyArchive(args: [String], connection: AirportConnection) {
     guard !isBusy else { return }
     let requestHost = AirportConnection.normalizedHost(connection.host)
-    runTask("Applying Archive Disk", requestHost: requestHost) {
+    runTask(localized("Applying Archive Disk"), requestHost: requestHost) {
       if self.mockMode {
         let redacted = AirportCommand.redact(args)
         let output = AirportMockBackend.output(for: args, dryRun: false)
@@ -173,7 +173,7 @@ extension AirportAppModel {
 
   private func archiveDiskStarted(connection: AirportConnection, requestHost: String) {
     invalidateDiskInventory()
-    status = "Archive Disk started. Waiting for archive to complete."
+    status = localized("Archive Disk started. Waiting for archive to complete.")
     preview = nil
     archiveCompletionMonitorTask?.cancel()
     archiveCompletionMonitorTask = Task { @MainActor [weak self] in
@@ -209,7 +209,7 @@ extension AirportAppModel {
           Self.archiveStatusACPSettings, connection: connection)
         if Self.archiveIsInProgress(reader: reader) {
           sawArchiveInProgress = true
-          status = "Archive Disk in progress."
+          status = localized("Archive Disk in progress.")
           continue
         }
         if sawArchiveInProgress {
@@ -223,8 +223,8 @@ extension AirportAppModel {
     }
 
     guard connectionStillMatches(requestHost) else { return }
-    status = "Archive Disk status check timed out."
-    appendLog("Archive Disk status check timed out.")
+    status = localized("Archive Disk status check timed out.")
+    appendLog(localized("Archive Disk status check timed out."))
   }
 
   private func finishArchiveCompletion(connection: AirportConnection, requestHost: String) async {
@@ -232,8 +232,8 @@ extension AirportAppModel {
       ignoreStaleOperation("Ignored Archive Disk completion for stale host \(requestHost).")
       return
     }
-    status = "Archive Disk complete."
-    appendLog("Archive Disk complete.")
+    status = localized("Archive Disk complete.")
+    appendLog(localized("Archive Disk complete."))
     if mockMode {
       applyDiskInventoryRefreshResult(AirportMockBackend.diskInventoryRefreshResult)
       return

@@ -45,13 +45,13 @@ struct DevicePopover: View {
       PopoverTitleLabel(
         text: model.baseStation.name.isEmpty ? "time capsule" : model.baseStation.name
       )
-      .frame(width: 283, height: 19)
+      .frame(width: 303, height: 19)
       .padding(.bottom, 6)
       PopoverDetailsRows(
         rows: deviceDetailRows,
         wirelessClients: model.wirelessClients,
         viewportHeight: deviceDetailsHeight)
-        .frame(width: 274, height: deviceDetailsHeight)
+        .frame(width: 294, height: deviceDetailsHeight)
       HStack {
         Spacer()
         PopoverEditButton {
@@ -61,27 +61,34 @@ struct DevicePopover: View {
             model.beginEditing()
           }
         }
-        .frame(width: 47, height: 18)
+        .fixedSize()
+        .frame(height: 18)
       }
       .padding(.top, 7)
     }
     .padding(13)
-    .frame(width: 300, height: devicePopoverHeight, alignment: .leading)
+    .frame(width: 320, height: devicePopoverHeight, alignment: .leading)
   }
 
   private var deviceDetailRows: [(String, String)] {
     var rows = [
-      ("status", model.selectedDeviceStatusText()),
-      ("network", model.wireless.networkName),
-      ("IP address", model.internet.ipv4Address),
-      ("LAN IP address", model.network.lanIPAddress),
-      ("serial number", model.baseStation.serialNumber),
-      ("version", model.baseStation.version),
+      (localized("status"), model.selectedDeviceStatusText()),
+      (localized("network"), model.wireless.networkName),
+      (localized("IP address"), model.internet.ipv4Address),
+      (localized("LAN IP address"), model.network.lanIPAddress),
+      (localized("serial number"), model.baseStation.serialNumber),
+      (localized("version"), model.baseStation.version),
     ]
+    let protocols = model.selectedTopologyDevice()?.publishedProtocols ?? []
+    if !protocols.isEmpty {
+      // Omitted when the device advertises nothing, matching how the popover
+      // already leaves out values it does not have.
+      rows.append((localized("file sharing"), protocols.joined(separator: " · ")))
+    }
     let firmwareUpdate = model.selectedDeviceFirmwareUpdateDetail
       .trimmingCharacters(in: .whitespacesAndNewlines)
     if !firmwareUpdate.isEmpty {
-      rows.insert(("firmware update", firmwareUpdate), at: 1)
+      rows.insert((localized("firmware update"), firmwareUpdate), at: 1)
     }
     let statusDetails = model.selectedDeviceStatusDetails()
       .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -110,14 +117,14 @@ struct DeviceLoadingPopover: View {
     SettingsLoadingPopover(
       title:
         model.hasLoadedSettings && !model.hasLoadedWirelessClients
-        ? "Loading Wireless Clients"
-        : "Connecting to Base Station")
+        ? localized("Loading Wireless Clients")
+        : localized("Connecting to Base Station"))
   }
 }
 
 private struct InternetLoadingPopover: View {
   var body: some View {
-    SettingsLoadingPopover(title: "Loading Internet Settings")
+    SettingsLoadingPopover(title: localized("Loading Internet Settings"))
   }
 }
 
@@ -157,13 +164,13 @@ struct InternetPopover: View {
   private var internetDetails: some View {
     VStack(alignment: .leading, spacing: 0) {
       PopoverTitleLabel(text: "Internet")
-        .frame(width: 283, height: 19)
+        .frame(width: 303, height: 19)
         .padding(.bottom, 6)
       PopoverDetailsRows(
         rows: [
           ("connection", model.internetPopoverConnectionStatus),
-          ("router address", model.hostInternet.routerAddress),
-          ("DNS servers", model.hostInternet.dnsServers),
+          (localized("router address"), model.hostInternet.routerAddress),
+          (localized("DNS servers"), model.hostInternet.dnsServers),
         ])
         .frame(width: 274, height: 54)
     }
@@ -201,7 +208,7 @@ private struct PopoverDetailsRows: NSViewRepresentable {
 
   func makeNSView(context: Context) -> NSScrollView {
     let scrollView = PopoverDetailsScrollView(
-      frame: NSRect(x: 0, y: 0, width: 274, height: viewportHeight))
+      frame: NSRect(x: 0, y: 0, width: 294, height: viewportHeight))
     scrollView.drawsBackground = false
     scrollView.borderType = .noBorder
     scrollView.hasVerticalScroller = false
@@ -240,7 +247,7 @@ private final class PopoverDetailsDocumentView: NSView {
 
   override init(frame frameRect: NSRect) {
     super.init(frame: frameRect)
-    self.frame = NSRect(x: 0, y: 0, width: 274, height: 107)
+    self.frame = NSRect(x: 0, y: 0, width: 294, height: 107)
     wirelessClientDetailsPanel.presentationDidEnd = {
       [weak self] clientID in
       self?.wirelessClientPresentationDidEnd(clientID: clientID)
@@ -274,7 +281,7 @@ private final class PopoverDetailsDocumentView: NSView {
       addSubview(
         textField(
           row.1.isEmpty ? "--" : row.1,
-          frame: NSRect(x: 122, y: y, width: 152, height: 19),
+          frame: NSRect(x: 122, y: y, width: 172, height: 19),
           label: false))
     }
 
@@ -282,7 +289,7 @@ private final class PopoverDetailsDocumentView: NSView {
     let y = CGFloat(rows.count) * DevicePopoverLayout.rowHeight
     addSubview(
       textField(
-        "wireless clients",
+        localized("wireless clients"),
         frame: NSRect(x: 0, y: y, width: 108, height: 19),
         label: true))
     for (index, client) in wirelessClients.enumerated() {
@@ -291,7 +298,7 @@ private final class PopoverDetailsDocumentView: NSView {
         frame: NSRect(
           x: 122,
           y: y + CGFloat(index) * DevicePopoverLayout.rowHeight,
-          width: 152,
+          width: 172,
           height: 19))
       clientField.setAccessibilityIdentifier("popover.wirelessClients.client")
       clientField.presentationChanged = {
@@ -408,7 +415,7 @@ private struct PopoverEditButton: NSViewRepresentable {
 
   func makeNSView(context: Context) -> NSButton {
     let button = PopoverEditNSButton(
-      title: "Edit", target: context.coordinator, action: #selector(Coordinator.press))
+      title: localized("Edit"), target: context.coordinator, action: #selector(Coordinator.press))
     button.bezelStyle = .rounded
     button.controlSize = .small
     button.font = .systemFont(ofSize: 13)
@@ -440,8 +447,11 @@ private struct PopoverEditButton: NSViewRepresentable {
 }
 
 private final class PopoverEditNSButton: NSButton {
+  /// 47pt is the measured English width. A longer translation ("Modifier",
+  /// "Bearbeiten") needs more, and the button is right-aligned behind a Spacer,
+  /// so growing widens it leftward without disturbing anything.
   override var intrinsicContentSize: NSSize {
-    NSSize(width: 47, height: 18)
+    NSSize(width: max(47, super.intrinsicContentSize.width), height: 18)
   }
 }
 
@@ -456,24 +466,24 @@ struct ConnectionPopover: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text("Connect to Base Station")
+      Text(localized("Connect to Base Station"))
         .font(.system(size: 13, weight: .semibold))
       if mode == .full {
         AirPortTextField(
           text: $model.connection.host,
-          placeholder: "Host",
+          placeholder: localized("Host"),
           identifier: "connection.popover.host")
           .frame(width: 220, height: 24)
       }
       AirPortSecureField(
         text: $model.connection.password,
-        placeholder: "Password",
+        placeholder: localized("Password"),
         identifier: "connection.popover.password",
         onSubmit: submitConnection)
         .frame(width: 220, height: 24)
       if mode == .passwordOnly {
         Toggle(
-          "Remember this password in my keychain",
+          localized("Remember this password in my keychain"),
           isOn: Binding(
             get: { model.rememberConnectionPassword },
             set: { model.updateRememberConnectionPassword($0) }))
@@ -484,20 +494,23 @@ struct ConnectionPopover: View {
       if mode == .full && !model.mockMode {
         AirPortTextField(
           text: $model.connection.repoPath,
-          placeholder: "Repo",
+          placeholder: localized("Repo"),
           identifier: "connection.popover.repository")
           .frame(width: 220, height: 24)
       }
       HStack {
         Spacer()
-        Button(model.isBusy ? "Working" : "Connect") {
+        Button(model.isBusy ? localized("Working") : localized("Connect")) {
           submitConnection()
         }
-        .accessibilityLabel("Connect")
+        .accessibilityLabel(localized("Connect"))
         .accessibilityIdentifier("connection.popover.connect")
         .keyboardShortcut(.defaultAction)
         .disabled(!model.canAttemptConnection)
       }
+      // model.status is "Connected to <host>", which interpolates the host and
+      // is therefore still English. Do not localize this prefix without also
+      // localizing the status it is matching.
       if !model.status.hasPrefix("Connected") {
         Text(model.status)
           .font(.caption)

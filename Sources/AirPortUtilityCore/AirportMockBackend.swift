@@ -10,6 +10,9 @@ enum AirportMockBackend {
           {
             "deviceName": "wd0",
             "builtIn": true,
+            "vendor": "WDC WD20EARX-00PASB0",
+            "revision": "51.0AB51",
+            "smartStatus": "verified",
             "partitions": [
               {
                 "deviceName": "dk2",
@@ -17,7 +20,8 @@ enum AirportMockBackend {
                 "format": "HFS",
                 "uuid": {"type":"bytes","length":16,"hex":"adabbc6e09e0579081f8444e687f35b9"},
                 "size": 953674,
-                "sizeFree": 474787
+                "sizeFree": 474787,
+                "sizeUsed": 478887
               }
             ]
           },
@@ -55,19 +59,19 @@ enum AirportMockBackend {
   static func statusText(environmentValue: EnvironmentLookup) -> String {
     switch (environmentValue("AIRPORT_UTILITY_MOCK_STATUS") ?? "ok").lowercased() {
     case "archive", "archiving":
-      return "Archiving disk"
+      return localized("Archiving disk")
     case "corrupt", "corrupted", "disk-corrupted", "disk_corrupted", "repair":
-      return "Disk needs repair"
+      return localized("Disk needs repair")
     case "config", "configuration", "configuration-incorrect", "configuration_incorrect":
-      return "Configuration problem"
+      return localized("Configuration problem")
     case "double-nat", "double_nat":
-      return "Double NAT"
+      return localized("Double NAT")
     case "dns", "no-dns", "no_dns":
-      return "No DNS servers configured"
+      return localized("No DNS servers configured")
     case "restart", "restarting":
-      return "Restarting"
+      return localized("Restarting")
     default:
-      return "Working normally"
+      return localized("Working normally")
     }
   }
 
@@ -95,7 +99,7 @@ enum AirportMockBackend {
       extendsDeviceID: "mock-time-capsule",
       modelName: "AirPort Express",
       productID: "115",
-      statusText: "Working normally")
+      statusText: localized("Working normally"))
     let extreme = AirportDiscoveredDevice(
       id: "mock-extreme",
       name: "guest extreme",
@@ -104,7 +108,7 @@ enum AirportMockBackend {
       identifiers: ["mock-extreme"],
       modelName: "AirPort Extreme",
       productID: "117",
-      statusText: "Working normally")
+      statusText: localized("Working normally"))
 
     switch (environmentValue("AIRPORT_UTILITY_MOCK_TOPOLOGY") ?? "single").lowercased() {
     case "independent":

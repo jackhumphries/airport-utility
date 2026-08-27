@@ -3,6 +3,101 @@ import XCTest
 @testable import AirPortUtilityCore
 
 final class DiskInventoryParserTests: XCTestCase {
+
+  /// The shape a real Time Capsule actually returns for MaSt: a bare array, and
+  /// every integer wrapped as {"type": "integer", "decimal": "...", "width": n}
+  /// rather than sent as a JSON number. Decoding only bare numbers and strings
+  /// silently produced nil sizes, so the pane showed no free space at all.
+  /// Identifiers here are anonymised; the structure is verbatim.
+  func testParsesTheWrappedIntegerFormARealDeviceSends() {
+    let json = """
+      [{
+        "blockSize": {"decimal": "512", "type": "integer", "width": 2},
+        "builtin": true,
+        "deviceName": "wd0",
+        "info": "Disk 1",
+        "partitions": [{
+          "deviceName": "dk2",
+          "format": "hfs",
+          "name": "Data2000",
+          "size": {"decimal": "1905681", "type": "integer", "width": 4},
+          "sizeFree": {"decimal": "623863", "type": "integer", "width": 4},
+          "sizeUsed": {"decimal": "1281818", "type": "integer", "width": 4},
+          "uuid": {"hex": "00000000000000000000000000000001", "length": 16, "type": "bytes"}
+        }],
+        "size": {"decimal": "1907729", "type": "integer", "width": 4},
+        "smartStatus": "verified",
+        "uuid": {"hex": "00000000000000000000000000000002", "length": 16, "type": "bytes"}
+      }]
+      """
+    let records = DiskInventoryParser.parse(stdout: json)
+    XCTAssertEqual(records.count, 1)
+    let record = records[0]
+    XCTAssertEqual(record.name, "Data2000")
+    XCTAssertEqual(record.sizeFree, 623_863 * 1024 * 1024)
+    XCTAssertEqual(record.size, 1_905_681 * 1024 * 1024)
+    XCTAssertEqual(record.smartStatus, "verified")
+    XCTAssertTrue(record.builtIn)
+  }
+
+  /// Some devices report capacity on the physical disk rather than on each
+  /// partition. A partition with no size of its own falls back to the disk's,
+  /// so the pane shows free space instead of nothing.
+  func testPartitionInheritsCapacityFromItsDisk() {
+    let json = """
+      {"decoded": {"disks": [{"deviceName": "wd0", "size": 1000, "sizeFree": 400,
+        "partitions": [
+          {"deviceName": "dk2", "name": {"type":"bytes","text":"Data"},
+           "uuid": {"type":"bytes","hex":"aa"}}
+        ]}]}}
+      """
+    let record = DiskInventoryParser.parse(stdout: json).first
+    XCTAssertEqual(record?.sizeFree, 400 * 1024 * 1024)
+    XCTAssertEqual(record?.size, 1000 * 1024 * 1024)
+  }
+
+  /// A partition that reports its own capacity keeps it.
+  func testPartitionCapacityWinsOverTheDisk() {
+    let json = """
+      {"decoded": {"disks": [{"deviceName": "wd0", "size": 1000, "sizeFree": 400,
+        "partitions": [
+          {"deviceName": "dk2", "name": {"type":"bytes","text":"Data"},
+           "uuid": {"type":"bytes","hex":"aa"}, "size": 500, "sizeFree": 250}
+        ]}]}}
+      """
+    XCTAssertEqual(
+      DiskInventoryParser.parse(stdout: json).first?.sizeFree, 250 * 1024 * 1024)
+  }
+
+  /// The device reports SMART once per physical disk, so every partition on that
+  /// disk must inherit it -- otherwise the pane shows a health status for one
+  /// volume and nothing for its sibling.
+  func testSMARTStatusIsCarriedFromTheDiskToItsPartitions() {
+    let json = """
+      {"decoded": {"disks": [{"deviceName": "wd0", "builtIn": true,
+        "smartStatus": "Verified",
+        "partitions": [
+          {"deviceName": "dk2", "name": {"type":"bytes","text":"Data"}, "uuid": {"type":"bytes","hex":"aa"}},
+          {"deviceName": "dk3", "name": {"type":"bytes","text":"Backup"}, "uuid": {"type":"bytes","hex":"bb"}}
+        ]}]}}
+      """
+    let records = DiskInventoryParser.parse(stdout: json)
+    XCTAssertEqual(records.count, 2)
+    XCTAssertEqual(records.map(\.smartStatus), ["Verified", "Verified"])
+  }
+
+  /// A partition that reports its own status keeps it.
+  func testPartitionSMARTStatusWinsOverTheDisk() {
+    let json = """
+      {"decoded": {"disks": [{"deviceName": "wd0", "smartStatus": "Verified",
+        "partitions": [
+          {"deviceName": "dk2", "name": {"type":"bytes","text":"Data"},
+           "uuid": {"type":"bytes","hex":"aa"}, "smartStatus": "Failing"}
+        ]}]}}
+      """
+    XCTAssertEqual(DiskInventoryParser.parse(stdout: json).first?.smartStatus, "Failing")
+  }
+
   func testDiskInventoryEmptyStateDoesNotExposeMaStRefreshInstruction() {
     XCTAssertEqual(
       DiskInventoryList.emptyStateText(didLoadInventory: false, isLoading: true),
@@ -450,5 +545,14 @@ final class DiskInventoryParserTests: XCTestCase {
 
     XCTAssertTrue(result.combinedOutput.contains("no external AirPort disk partition"))
     XCTAssertTrue(result.redactedArguments.contains("<password>"))
+  }
+
+  func testMockInventoryCarriesDriveDetail() {
+    let records = DiskInventoryParser.parse(stdout: AirportMockBackend.maStJSON)
+    let first = records.first
+    XCTAssertEqual(first?.vendor, "WDC WD20EARX-00PASB0")
+    XCTAssertEqual(first?.revision, "51.0AB51")
+    XCTAssertEqual(first?.smartStatus, "verified")
+    XCTAssertNotNil(first?.sizeUsed)
   }
 }

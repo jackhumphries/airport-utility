@@ -26,7 +26,7 @@ enum FirmwareInstallError: LocalizedError {
     case .uploadIncomplete(let progress):
       return "Firmware upload did not complete. Last reported progress: \(progress)."
     case .rebootNotSent:
-      return "Firmware upload completed, but the base station reboot command was not sent."
+      return localized("Firmware upload completed, but the base station reboot command was not sent.")
     case .versionMismatch(let expected, let actual):
       return
         "Firmware install completed, but the base station reports version \(actual) instead of \(expected)."

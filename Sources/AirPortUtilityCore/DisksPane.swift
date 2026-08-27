@@ -16,51 +16,50 @@ struct DisksPane: View {
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         DisksPaneButton(
-          "Erase Disk…", width: 107, isEnabled: selectedDisk != nil,
+          localized("Erase Disk…"), width: 107, isEnabled: selectedDisk != nil,
           identifier: "disks.erase.open"
         ) {
           showErase = true
         }
         Spacer()
         DisksPaneButton(
-          "Archive Disk…", width: 120, isEnabled: canArchiveDisk,
+          localized("Archive Disk…"), width: 120, isEnabled: canArchiveDisk,
           identifier: "disks.archive.open"
         ) {
           showArchive = true
         }
       }
-      .frame(width: 485)
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         DisksCheckbox(
-          "Enable file sharing", isOn: $model.disks.fileSharing,
+          localized("Enable file sharing"), isOn: $model.disks.fileSharing,
           identifier: "disks.file.sharing")
       }
       .padding(.top, 11)
-      FormRow(title: "Secure Shared Disks:") {
+      FormRow(title: localized("Secure Shared Disks:")) {
         DiskSecurityPopup(
           selection: $model.disks.secureSharedDisks,
           identifier: "disks.secure.shared.disks")
           .frame(width: 279, height: 20)
       }
       if model.disks.secureSharedDisks == "disk-password" {
-        FormRow(title: "Disk Password:") {
+        FormRow(title: localized("Disk Password:")) {
           AirPortSecureField(
             text: $model.disks.diskPassword,
-            placeholder: "Disk password",
+            placeholder: localized("Disk password"),
             identifier: "disks.disk.password")
             .frame(height: 24)
         }
-        FormRow(title: "Verify Password:") {
+        FormRow(title: localized("Verify Password:")) {
           AirPortSecureField(
             text: $model.disks.verifyDiskPassword,
-            placeholder: "Verify disk password",
+            placeholder: localized("Verify disk password"),
             identifier: "disks.verify.password")
             .frame(height: 24)
         }
       }
       if model.disks.secureSharedDisks == "accounts" {
-        FormRow(title: "Accounts:") {
+        FormRow(title: localized("Accounts:")) {
           DiskAccountsEditor(
             accounts: $model.disks.fileSharingAccounts,
             selectedID: $model.disks.selectedFileSharingAccountID,
@@ -69,28 +68,28 @@ struct DisksPane: View {
         if model.supportsDiskFileSharingAccountEditing,
           let selectedAccount = selectedFileSharingAccountBinding
         {
-          FormRow(title: "Account Name:") {
+          FormRow(title: localized("Account Name:")) {
             AirPortTextField(
               text: selectedAccount.name,
-              placeholder: "Account name",
+              placeholder: localized("Account name"),
               identifier: "disks.account.name")
               .frame(height: 24)
           }
-          FormRow(title: "Password:") {
+          FormRow(title: localized("Password:")) {
             AirPortSecureField(
               text: selectedAccount.password,
-              placeholder: "Account password",
+              placeholder: localized("Account password"),
               identifier: "disks.account.password")
               .frame(height: 24)
           }
-          FormRow(title: "Verify Password:") {
+          FormRow(title: localized("Verify Password:")) {
             AirPortSecureField(
               text: selectedAccount.verifyPassword,
-              placeholder: "Verify account password",
+              placeholder: localized("Verify account password"),
               identifier: "disks.account.verify.password")
               .frame(height: 24)
           }
-          FormRow(title: "File Sharing Access:") {
+          FormRow(title: localized("File Sharing Access:")) {
             DiskAccountAccessPopup(
               selection: selectedAccount.access,
               identifier: "disks.account.file.sharing.access")
@@ -101,7 +100,7 @@ struct DisksPane: View {
         HStack {
           Spacer().frame(width: AirPortLayout.formControlLeading)
           DisksCheckbox(
-            "Remember this password in my keychain",
+            localized("Remember this password in my keychain"),
             isOn: Binding(
               get: { model.remembersCurrentDiskPassword },
               set: { model.updateRememberCurrentDiskPassword($0) }),
@@ -194,7 +193,13 @@ struct DisksPaneButton: NSViewRepresentable {
     button.setButtonType(.momentaryPushIn)
     button.alignment = .center
     button.translatesAutoresizingMaskIntoConstraints = false
-    button.widthAnchor.constraint(equalToConstant: width).isActive = true
+    // Exact width, but never narrower than the label needs. The constants were
+    // measured against English and truncate longer translations; a plain
+    // greaterThanOrEqual constraint instead lets the button expand to fill,
+    // which changes the English layout.
+    button.widthAnchor.constraint(
+      equalToConstant: max(width, button.intrinsicContentSize.width)
+    ).isActive = true
     button.heightAnchor.constraint(equalToConstant: 22).isActive = true
     button.isEnabled = isEnabled
     button.setAccessibilityTitle(title)
@@ -241,9 +246,9 @@ private struct DiskSecurityPopup: NSViewRepresentable {
   var identifier: String
 
   private let options = [
-    ("With accounts", "accounts"),
-    ("With a disk password", "disk-password"),
-    ("With device password", "device-password"),
+    (localized("With accounts"), "accounts"),
+    (localized("With a disk password"), "disk-password"),
+    (localized("With device password"), "device-password"),
   ]
 
   func makeNSView(context: Context) -> NSPopUpButton {
@@ -315,9 +320,9 @@ private struct DiskAccountAccessPopup: NSViewRepresentable {
   var identifier: String
 
   private let options = [
-    ("Read and Write", "read-write"),
-    ("Read Only", "read-only"),
-    ("Not Allowed", "not-allowed"),
+    (localized("Read and Write"), "read-write"),
+    (localized("Read Only"), "read-only"),
+    (localized("Not Allowed"), "not-allowed"),
   ]
 
   func makeNSView(context: Context) -> NSPopUpButton {
@@ -458,7 +463,7 @@ private struct DiskAccountsEditor: View {
     VStack(alignment: .leading, spacing: 6) {
       VStack(spacing: 0) {
         HStack {
-          Text("Account Name")
+          Text(localized("Account Name"))
             .font(.system(size: 12))
             .foregroundStyle(Color.white.opacity(0.78))
           Spacer()
@@ -584,7 +589,7 @@ private struct DiskAccountRow: View {
       .disabled(!isEnabled)
       .contentShape(Rectangle())
       .onTapGesture(perform: select)
-      .accessibilityLabel(name.isEmpty ? "File sharing account" : name)
+      .accessibilityLabel(name.isEmpty ? localized("File sharing account") : name)
       .accessibilityValue(isSelected ? "selected" : "")
       .accessibilityIdentifier(identifier ?? "")
   }
@@ -633,7 +638,7 @@ struct DiskInventoryList: View {
 
   private func partitionsRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
     HStack(alignment: .top, spacing: AirPortLayout.formColumnSpacing) {
-      Text("Partitions:")
+      Text(localized("Partitions:"))
         .font(.system(size: 13))
         .frame(width: AirPortLayout.formLabelWidth, alignment: .trailing)
         .padding(.top, 8)
@@ -658,18 +663,69 @@ struct DiskInventoryList: View {
 
   nonisolated static func emptyStateText(didLoadInventory: Bool, isLoading: Bool) -> String {
     if isLoading {
-      return "Loading disk information..."
+      return localized("Loading disk information...")
     }
     if didLoadInventory {
-      return "No disk partitions found."
+      return localized("No disk partitions found.")
     }
-    return "No disk information loaded."
+    return localized("No disk information loaded.")
   }
 }
 
-private struct DiskInventoryRow: View {
+struct DiskInventoryRow: View {
   var record: DiskRecord
   var isSelected: Bool
+
+  /// The drive behind this volume: vendor and model, then firmware revision.
+  static func hardwareLine(for record: DiskRecord) -> String? {
+    let parts = [record.vendor, record.revision]
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+    return parts.isEmpty ? nil : parts.joined(separator: " · ")
+  }
+
+  /// Capacity and health: total, how much is used, and the SMART status.
+  ///
+  /// Shown beside the volume rather than behind a button: the device publishes
+  /// all of it with the disk inventory, so there is nothing to run. The SMART
+  /// value passes through `localized`, so a known term is translated and
+  /// anything unfamiliar appears verbatim rather than being guessed at.
+  static func capacityLine(for record: DiskRecord) -> String? {
+    var parts: [String] = []
+    let byteCount = { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) }
+    // "1.34 TB used / 2 TB" rather than a bare "1.34 TB / 2 TB": without the
+    // word there is nothing to say which number is which. The row only has
+    // about 205pt of text width, which a full-precision pair overruns even
+    // without the word, so the line is allowed to scale down slightly (see
+    // `body`) instead of being kept short at the cost of being ambiguous.
+    switch (record.sizeUsed, record.size, record.sizeFree) {
+    case let (used?, total?, _):
+      parts.append(localizedFormat("%1$@ used / %2$@", byteCount(used), byteCount(total)))
+    case let (nil, total?, free?):
+      parts.append(
+        localizedFormat("%1$@ used / %2$@", byteCount(total - free), byteCount(total)))
+    case let (used?, nil, _):
+      parts.append(localizedFormat("%@ used", byteCount(used)))
+    case let (nil, nil, free?):
+      parts.append(localizedFormat("%@ free", byteCount(free)))
+    case let (nil, total?, nil):
+      parts.append(byteCount(total))
+    default:
+      break
+    }
+    let smartStatus = record.smartStatus.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !smartStatus.isEmpty {
+      parts.append(localizedFormat("SMART: %@", localized(smartStatus)))
+    }
+    return parts.isEmpty ? nil : parts.joined(separator: " · ")
+  }
+
+  /// Long vendor strings and full-precision capacity pairs ("502.15 GB used /
+  /// 931.32 GB · SMART: verified" is 244pt in Spanish against 205pt of room)
+  /// overrun the row. Shrinking to 8pt keeps the whole line readable, where
+  /// truncation would drop the SMART status — the part worth reading — off the
+  /// end. Ordinary values render at the full 10pt.
+  static let detailMinimumScale: CGFloat = 0.8
 
   var body: some View {
     HStack(spacing: 6) {
@@ -678,13 +734,23 @@ private struct DiskInventoryRow: View {
         .scaledToFit()
         .frame(width: 50, height: 50)
         .accessibilityLabel(iconAccessibilityLabel)
+
       VStack(alignment: .leading, spacing: 3) {
         DiskNameTextField(record.name)
           .frame(height: 19)
-        if let free = record.sizeFree {
-          Text("\(ByteCountFormatter.string(fromByteCount: free, countStyle: .file)) Free")
-            .font(.system(size: 12))
-            .foregroundStyle(Color.white.opacity(isSelected ? 0.78 : 0.42))
+        if let hardware = Self.hardwareLine(for: record) {
+          Text(hardware)
+            .font(.system(size: 10))
+            .lineLimit(1)
+            .minimumScaleFactor(Self.detailMinimumScale)
+            .foregroundStyle(Color.white.opacity(isSelected ? 0.7 : 0.38))
+        }
+        if let capacity = Self.capacityLine(for: record) {
+          Text(capacity)
+            .font(.system(size: 10))
+            .lineLimit(1)
+            .minimumScaleFactor(Self.detailMinimumScale)
+            .foregroundStyle(Color.white.opacity(isSelected ? 0.7 : 0.38))
         }
       }
       Spacer()

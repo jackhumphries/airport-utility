@@ -9,9 +9,9 @@ enum AirPortSetupMode: String, CaseIterable, Identifiable {
 
   var title: String {
     switch self {
-    case .create: "Create a new network"
-    case .extend: "Add to an existing network"
-    case .replace: "Replace an existing device"
+    case .create: localized("Create a new network")
+    case .extend: localized("Add to an existing network")
+    case .replace: localized("Replace an existing device")
     }
   }
 }
@@ -36,7 +36,7 @@ struct AirPortSetupState: Equatable {
   var sourceDeviceID = ""
   var airPlayEnabled = true
   var airPlaySpeakerName = ""
-  var progressText = "Examining the base station…"
+  var progressText = localized("Examining the base station…")
   var errorText = ""
   var profile: JSONValue?
 
@@ -96,7 +96,7 @@ extension AirportAppModel {
       deviceName: suggestedName,
       networkName: suggestedName,
       airPlaySpeakerName: suggestedName,
-      progressText: "Examining the base station…")
+      progressText: localized("Examining the base station…"))
     isDevicePopoverPresented = false
     isEditingDevice = false
     isShowingRestartConfirmation = false
@@ -112,7 +112,7 @@ extension AirportAppModel {
           try await Task.sleep(nanoseconds: 650_000_000)
         } else {
           guard self.setupSessionID == sessionID, self.isShowingSetup else { return }
-          self.setup.progressText = "Gathering information about your network…"
+          self.setup.progressText = localized("Gathering information about your network…")
           let profile = try await self.readSetupProfile()
           guard self.setupSessionID == sessionID, self.isShowingSetup else { return }
           self.setup.profile = profile
@@ -124,7 +124,7 @@ extension AirportAppModel {
       } catch {
         guard self.setupSessionID == sessionID, self.isShowingSetup else { return }
         self.setup.errorText = Self.userFacingErrorDescription(error.localizedDescription)
-        self.setup.progressText = "Could not read the base station setup profile."
+        self.setup.progressText = localized("Could not read the base station setup profile.")
         self.setup.step = .details
       }
     }
@@ -162,7 +162,7 @@ extension AirportAppModel {
       setup.step = .details
     case .details:
       guard setup.canContinueDetails else {
-        setup.errorText = "Enter names and matching passwords of at least 8 characters."
+        setup.errorText = localized("Enter names and matching passwords of at least 8 characters.")
         return
       }
       applySetup()
@@ -201,7 +201,7 @@ extension AirportAppModel {
       isRestorePending = true
       pendingRestoreConnection = activeConnection
       pendingRestoreDeviceIdentifiers = deviceIdentifiers
-      status = "Waiting to restore default settings"
+      status = localized("Waiting to restore default settings")
       return
     }
     startRestoreDefaultSettings(
@@ -243,13 +243,13 @@ extension AirportAppModel {
   private func performRestoreDefaultSettings(connection activeConnection: AirportConnection) {
     let commands = restoreDefaultCommandSequence(connection: activeConnection)
     applySequence(
-      title: "Restore Default Settings", commands: commands,
+      title: localized("Restore Default Settings"), commands: commands,
       connection: activeConnection, cleanScope: .none,
       delayBetweenCommandsNanoseconds: 8_000_000_000,
       allowsConnectionHostChange: true
     ) {
       self.isWaitingForRestoreRestart = true
-      self.status = "Waiting for this base station to restart with default settings."
+      self.status = localized("Waiting for this base station to restart with default settings.")
       self.completeRestoreIfResetDeviceAvailable()
     } failure: { description in
       self.isRestoringDefaults = false
@@ -259,7 +259,7 @@ extension AirportAppModel {
       self.pendingRestoreDeviceIdentifiers = []
       self.isShowingRestoreConfirmation = false
       self.clearBaseStationUpdate()
-      self.status = "Restore failed: \(description)"
+      self.status = localizedFormat("Restore failed: %@", description)
     }
   }
 
@@ -282,11 +282,11 @@ extension AirportAppModel {
       var factoryConnection = activeConnection
       factoryConnection.password = "public"
       return [
-        ("Identify Base Station", marker("lebl", connection: activeConnection)),
-        ("Restore Factory Defaults", marker("acRF", connection: activeConnection)),
-        ("Restart Base Station", marker("acRB", connection: activeConnection)),
-        ("Finish Factory Restore", marker("lebs", connection: factoryConnection)),
-        ("Restart with Default Settings", marker("acRB", connection: factoryConnection)),
+        (localized("Identify Base Station"), marker("lebl", connection: activeConnection)),
+        (localized("Restore Factory Defaults"), marker("acRF", connection: activeConnection)),
+        (localized("Restart Base Station"), marker("acRB", connection: activeConnection)),
+        (localized("Finish Factory Restore"), marker("lebs", connection: factoryConnection)),
+        (localized("Restart with Default Settings"), marker("acRB", connection: factoryConnection)),
       ]
     }
     let reset = AirportCommand.rawWriteJSON(
@@ -297,17 +297,17 @@ extension AirportAppModel {
     let reboot = AirportCommand.rawWriteJSON(
       setting: "acRB", valueJSON: emptyBytes, connection: factoryConnection, dryRun: false
     ).usingAirPortBackendSubcommand("legacy-write") + ["--streaming", "--request-flags", "0"]
-    return [("Restore Factory Defaults", reset), ("Restart Base Station", reboot)]
+    return [(localized("Restore Factory Defaults"), reset), (localized("Restart Base Station"), reboot)]
   }
 
   func applySetup() {
     guard setup.canContinueDetails else { return }
     guard !isBusy else {
-      setup.errorText = "Wait for the current base station operation to finish, then try again."
+      setup.errorText = localized("Wait for the current base station operation to finish, then try again.")
       return
     }
     guard setup.profile != nil else {
-      setup.errorText = "The base station setup profile has not loaded. Go Back and try again."
+      setup.errorText = localized("The base station setup profile has not loaded. Go Back and try again.")
       return
     }
     let activeConnection = connection
@@ -321,9 +321,9 @@ extension AirportAppModel {
     isWaitingForSetupRestart = false
     didSetupDeviceDisappear = false
     setup.step = .applying
-    setup.progressText = "Setting up this \(setupDeviceModelName)…"
+    setup.progressText = localizedFormat("Setting up this %@…", setupDeviceModelName)
     applySequence(
-      title: "Setup", commands: commands, connection: activeConnection, cleanScope: .none,
+      title: localized("Setup"), commands: commands, connection: activeConnection, cleanScope: .none,
       appliedAdminPassword: password, allowsConnectionHostChange: true
     ) {
       self.setupWriteDidSucceed(password: password)
@@ -334,14 +334,14 @@ extension AirportAppModel {
       self.setupPreRestartBonjourSeed = ""
       self.clearBaseStationUpdate()
       self.setup.errorText = description
-      self.setup.progressText = "Setup failed"
+      self.setup.progressText = localized("Setup failed")
       self.setup.step = .details
     }
   }
 
   func setupWriteDidSucceed(password: String) {
     connection.password = password
-    setup.progressText = "Waiting for this base station to apply its settings and restart…"
+    setup.progressText = localized("Waiting for this base station to apply its settings and restart…")
     setup.password = ""
     setup.verifyPassword = ""
     isWaitingForSetupRestart = true
@@ -368,7 +368,7 @@ extension AirportAppModel {
     if usesLegacyACP, let valuesJSON = try? setupLegacyAtomicValuesJSON() {
       return [
         (
-          "Setup",
+          localized("Setup"),
           AirportCommand.rawWriteValuesJSON(
             valuesJSON, connection: activeConnection, dryRun: false
           ).usingAirPortBackendSubcommand("legacy-write") + [
@@ -380,7 +380,7 @@ extension AirportAppModel {
     if !usesLegacyACP, let valuesJSON = try? setupAtomicValuesJSON() {
       return [
         (
-          "Setup",
+          localized("Setup"),
           AirportCommand.rawWriteValuesJSON(
             valuesJSON, connection: activeConnection, dryRun: false) + ["--no-verify"]
         )
@@ -429,8 +429,8 @@ extension AirportAppModel {
     let adminPassword = AirportCommand.rawWrite(
       setting: "syPW", value: password, connection: activeConnection, dryRun: false)
     var commands = appliedFinalCommand([
-      ("Network Setup", settings), ("Base Station Name", name),
-      ("Base Station Password", adminPassword),
+      (localized("Network Setup"), settings), (localized("Base Station Name"), name),
+      (localized("Base Station Password"), adminPassword),
     ])
     if !commands[commands.count - 1].1.contains("--setup-complete") {
       commands[commands.count - 1].1.append("--setup-complete")
@@ -608,8 +608,8 @@ private enum AirPortSetupPayloadError: LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .missingProfile: "The base station setup profile has not loaded yet."
-    case .incompleteProfile: "The base station setup profile is missing Wi-Fi or timezone settings."
+    case .missingProfile: localized("The base station setup profile has not loaded yet.")
+    case .incompleteProfile: localized("The base station setup profile is missing Wi-Fi or timezone settings.")
     }
   }
 }
@@ -708,9 +708,9 @@ struct AirPortSetupSheet: View {
   private var recommendation: some View {
     VStack(spacing: 20) {
       deviceImage
-      Text("Set up this \(model.setupDeviceModelName) to create a new Wi-Fi network.")
+      Text(localizedFormat("Set up this %@ to create a new Wi-Fi network.", model.setupDeviceModelName))
         .font(.system(size: 16, weight: .semibold))
-      Text("This \(model.setupDeviceModelName) will create a network.")
+      Text(localizedFormat("This %@ will create a network.", model.setupDeviceModelName))
         .font(.system(size: 13)).foregroundStyle(.secondary)
     }
     .padding(40)
@@ -718,7 +718,7 @@ struct AirPortSetupSheet: View {
 
   private var choices: some View {
     VStack(alignment: .leading, spacing: 18) {
-      Text("What do you want to do with this \(model.setupDeviceModelName)?")
+      Text(localizedFormat("What do you want to do with this %@?", model.setupDeviceModelName))
         .font(.system(size: 16, weight: .semibold))
       Picker("", selection: $model.setup.mode) {
         ForEach(AirPortSetupMode.allCases) { mode in Text(mode.title).tag(mode) }
@@ -734,30 +734,30 @@ struct AirPortSetupSheet: View {
     VStack(alignment: .leading, spacing: 14) {
       Text(model.setup.mode.title).font(.system(size: 16, weight: .semibold))
       if model.setup.mode == .replace {
-        Picker("Base Station to Replace:", selection: $model.setup.sourceDeviceID) {
-          Text("Choose a base station").tag("")
+        Picker(localized("Base Station to Replace:"), selection: $model.setup.sourceDeviceID) {
+          Text(localized("Choose a base station")).tag("")
           ForEach(model.setupSourceDevices) { Text($0.displayName).tag($0.id) }
         }
         .frame(width: 440)
       } else if model.setup.mode == .extend, !model.setupNetworkSuggestions.isEmpty {
-        Picker("Network Name:", selection: $model.setup.networkName) {
+        Picker(localized("Network Name:"), selection: $model.setup.networkName) {
           ForEach(model.setupNetworkSuggestions, id: \.self) { Text($0).tag($0) }
         }
         .frame(width: 440)
       } else {
-        setupField("Network Name:", text: $model.setup.networkName, secure: false)
+        setupField(localized("Network Name:"), text: $model.setup.networkName, secure: false)
       }
-      setupField("Base Station Name:", text: $model.setup.deviceName, secure: false)
-      setupField("Password:", text: $model.setup.password, secure: true)
-      setupField("Verify Password:", text: $model.setup.verifyPassword, secure: true)
-      Toggle("Use a single password", isOn: $model.setup.useSinglePassword)
+      setupField(localized("Base Station Name:"), text: $model.setup.deviceName, secure: false)
+      setupField(localized("Password:"), text: $model.setup.password, secure: true)
+      setupField(localized("Verify Password:"), text: $model.setup.verifyPassword, secure: true)
+      Toggle(localized("Use a single password"), isOn: $model.setup.useSinglePassword)
         .toggleStyle(.checkbox).font(.system(size: 13)).padding(.leading, 170)
       if model.showsSetupAirPlayControls {
-        Toggle("Enable AirPlay", isOn: $model.setup.airPlayEnabled)
+        Toggle(localized("Enable AirPlay"), isOn: $model.setup.airPlayEnabled)
           .toggleStyle(.checkbox).font(.system(size: 13)).padding(.leading, 170)
-        setupField("AirPlay Speaker Name:", text: $model.setup.airPlaySpeakerName, secure: false)
+        setupField(localized("AirPlay Speaker Name:"), text: $model.setup.airPlaySpeakerName, secure: false)
       }
-      Text(model.setup.errorText.isEmpty ? "Password must be at least 8 characters." : model.setup.errorText)
+      Text(model.setup.errorText.isEmpty ? localized("Password must be at least 8 characters.") : model.setup.errorText)
         .font(.system(size: 11))
         .foregroundStyle(model.setup.errorText.isEmpty ? Color.secondary : Color.red)
         .padding(.leading, 178)
@@ -768,25 +768,25 @@ struct AirPortSetupSheet: View {
   private var completion: some View {
     VStack(spacing: 18) {
       deviceImage
-      Text("Setup Complete").font(.system(size: 18, weight: .semibold))
-      Text("“\(model.setup.deviceName)” is now available.").font(.system(size: 13))
+      Text(localized("Setup Complete")).font(.system(size: 18, weight: .semibold))
+      Text(localizedFormat("“%@” is now available.", model.setup.deviceName)).font(.system(size: 13))
     }
   }
 
   private var controls: some View {
     HStack {
       if model.setup.step == .recommendation {
-        Button("Other Options") { model.showSetupChoices() }
+        Button(localized("Other Options")) { model.showSetupChoices() }
           .accessibilityIdentifier("setup.other.options")
       } else if model.setup.step == .choices || model.setup.step == .details {
-        Button("Back") { model.setupBack() }.accessibilityIdentifier("setup.back")
+        Button(localized("Back")) { model.setupBack() }.accessibilityIdentifier("setup.back")
       }
       Spacer()
       if model.setup.step != .applying && model.setup.step != .complete {
-        Button("Cancel") { model.cancelSetup() }.accessibilityIdentifier("setup.cancel")
+        Button(localized("Cancel")) { model.cancelSetup() }.accessibilityIdentifier("setup.cancel")
       }
       if model.setup.step != .examining && model.setup.step != .applying {
-        Button(model.setup.step == .complete ? "Done" : "Next") { model.setupNext() }
+        Button(model.setup.step == .complete ? localized("Done") : localized("Next")) { model.setupNext() }
           .keyboardShortcut(.defaultAction)
           .disabled(model.setup.step == .details && !model.setup.canContinueDetails)
           .accessibilityIdentifier(model.setup.step == .complete ? "setup.done" : "setup.next")
@@ -804,9 +804,9 @@ struct AirPortSetupSheet: View {
 
   private var choiceDescription: String {
     switch model.setup.mode {
-    case .create: "Create a separate Wi-Fi network using this base station."
-    case .extend: "Join or extend a Wi-Fi network that is already available."
-    case .replace: "Copy compatible settings from another AirPort base station."
+    case .create: localized("Create a separate Wi-Fi network using this base station.")
+    case .extend: localized("Join or extend a Wi-Fi network that is already available.")
+    case .replace: localized("Copy compatible settings from another AirPort base station.")
     }
   }
 
@@ -825,17 +825,17 @@ struct RestartBaseStationSheet: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("Restart Base Station?").font(.system(size: 15, weight: .semibold))
+      Text(localized("Restart Base Station?")).font(.system(size: 15, weight: .semibold))
       Text(
-        "The device and its network services will be temporarily unavailable. Are you sure you want to continue?"
+        localized("The device and its network services will be temporarily unavailable. Are you sure you want to continue?")
       )
       .font(.system(size: 13))
       .fixedSize(horizontal: false, vertical: true)
       HStack {
         Spacer()
-        Button("Cancel") { model.isShowingRestartConfirmation = false }
+        Button(localized("Cancel")) { model.isShowingRestartConfirmation = false }
           .accessibilityIdentifier("restart.cancel")
-        Button("Continue") { model.restartBaseStation() }
+        Button(localized("Continue")) { model.restartBaseStation() }
           .keyboardShortcut(.defaultAction)
           .accessibilityIdentifier("restart.continue")
       }
@@ -851,22 +851,22 @@ struct RestoreDefaultSettingsSheet: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
       if model.isRestoringDefaults || model.isRestorePending {
-        Text("Restoring Base Station…").font(.system(size: 15, weight: .semibold))
+        Text(localized("Restoring Base Station…")).font(.system(size: 15, weight: .semibold))
         HStack(spacing: 12) {
           ProgressView().controlSize(.small)
-          Text("Waiting for this base station to restore its default settings and restart…")
+          Text(localized("Waiting for this base station to restore its default settings and restart…"))
             .font(.system(size: 13)).fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityIdentifier("restore.progress")
       } else {
-        Text("Restore Default Settings?").font(.system(size: 15, weight: .semibold))
-        Text("Restoring this Base Station to factory defaults erases its settings.")
+        Text(localized("Restore Default Settings?")).font(.system(size: 15, weight: .semibold))
+        Text(localized("Restoring this Base Station to factory defaults erases its settings."))
           .font(.system(size: 13)).fixedSize(horizontal: false, vertical: true)
         HStack {
           Spacer()
-          Button("Cancel") { model.isShowingRestoreConfirmation = false }
+          Button(localized("Cancel")) { model.isShowingRestoreConfirmation = false }
             .accessibilityIdentifier("restore.cancel")
-          Button("Continue") { model.restoreDefaultSettings() }
+          Button(localized("Continue")) { model.restoreDefaultSettings() }
             .keyboardShortcut(.defaultAction).accessibilityIdentifier("restore.continue")
         }
       }

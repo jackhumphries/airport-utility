@@ -5,31 +5,44 @@ struct BaseStationPane: View {
 
   var body: some View {
     PaneBox {
-      FormRow(title: "Base Station Name:") {
+      // Read-only: the device reports a product ID, not a generation, and this
+      // is the only place the hardware it maps to is stated.
+      if let generation = AirPortDeviceGeneration.label(
+        forProductID: model.baseStation.productID)
+      {
+        FormRow(title: localized("Generation:")) {
+          Text(generation)
+            .font(.system(size: 13))
+            .textSelection(.enabled)
+            .accessibilityIdentifier("base.station.generation")
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+      }
+      FormRow(title: localized("Base Station Name:")) {
         AirPortTextField(
           text: $model.baseStation.name,
-          placeholder: "Name",
+          placeholder: localized("Name"),
           selectOnAppear: true,
           identifier: "base.station.name")
       }
-      FormRow(title: "Base Station Password:") {
+      FormRow(title: localized("Base Station Password:")) {
         AirPortSecureField(
           text: $model.baseStation.newAdminPassword,
-          placeholder: "New password",
+          placeholder: localized("New password"),
           identifier: "base.station.admin.password")
           .frame(height: 24)
       }
-      FormRow(title: "Verify Password:") {
+      FormRow(title: localized("Verify Password:")) {
         AirPortSecureField(
           text: $model.baseStation.verifyAdminPassword,
-          placeholder: "Verify password",
+          placeholder: localized("Verify password"),
           identifier: "base.station.admin.verify.password")
           .frame(height: 24)
       }
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         BaseStationCheckbox(
-          "Remember this password in my keychain",
+          localized("Remember this password in my keychain"),
           isOn: Binding(
             get: { model.rememberConnectionPassword },
             set: { model.updateRememberConnectionPassword($0) }),
@@ -38,17 +51,17 @@ struct BaseStationPane: View {
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         BaseStationCheckbox(
-          "Allow setup over Ethernet WAN port",
+          localized("Allow setup over Ethernet WAN port"),
           isOn: $model.baseStation.allowSetupOverWAN,
           identifier: "base.station.allow.setup.over.wan")
       }
       if model.capabilities.supportsBaseStationMetadata {
-        FormRow(title: "Contact:") {
+        FormRow(title: localized("Contact:")) {
           AirPortTextField(
             text: $model.legacyDeviceOptions.baseStation.contact,
             identifier: "base.station.contact")
         }
-        FormRow(title: "Location:") {
+        FormRow(title: localized("Location:")) {
           AirPortTextField(
             text: $model.legacyDeviceOptions.baseStation.location,
             identifier: "base.station.location")
@@ -57,11 +70,11 @@ struct BaseStationPane: View {
       HStack {
         Spacer().frame(width: AirPortLayout.formControlLeading)
         BaseStationCheckbox(
-          "Set time automatically",
+          localized("Set time automatically"),
           isOn: $model.legacyDeviceOptions.baseStation.setTimeAutomatically,
           identifier: "base.station.set.time.automatically")
       }
-      FormRow(title: "Time Server:") {
+      FormRow(title: localized("Time Server:")) {
         AirPortTextField(
           text: $model.legacyDeviceOptions.baseStation.timeServer,
           placeholder: "time.apple.com",

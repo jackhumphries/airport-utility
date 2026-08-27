@@ -71,7 +71,7 @@ struct TopologyView: View {
         }
 
         if model.visibleTopologyDevices.isEmpty {
-          Text("No AirPort base stations discovered")
+          Text(localized("No AirPort base stations discovered"))
             .font(.system(size: 14))
             .foregroundStyle(.white.opacity(0.78))
             .shadow(color: AirPortTopologyStyle.labelShadow, radius: 2, x: 0, y: 1)
@@ -152,10 +152,10 @@ struct TopologyView: View {
 
   private func baseStationStatusColor(for device: AirportDiscoveredDevice) -> Color {
     let status = model.deviceStatusText(for: device)
-    if model.isTopologyDeviceUpdating(device) || status == "Restarting" {
+    if model.isTopologyDeviceUpdating(device) || status == localized("Restarting") {
       return updatingStatusColor
     }
-    return status == "Working normally" ? normalStatusColor : updatingStatusColor
+    return status == localized("Working normally") ? normalStatusColor : updatingStatusColor
   }
 
   private func presentInternetPopover() {
@@ -322,10 +322,10 @@ private struct TopologyTreeView: View {
     let normal = Color(red: 0.29, green: 0.86, blue: 0.25)
     let warning = Color(red: 1.0, green: 0.73, blue: 0.2)
     let status = model.deviceStatusText(for: device)
-    if model.isTopologyDeviceUpdating(device) || status == "Restarting" {
+    if model.isTopologyDeviceUpdating(device) || status == localized("Restarting") {
       return warning
     }
-    return status == "Working normally" ? normal : warning
+    return status == localized("Working normally") ? normal : warning
   }
 
 }
@@ -494,10 +494,10 @@ enum DevicePopoverPresentationPolicy {
 }
 
 struct OtherWiFiDevicesMenu: NSViewRepresentable {
-  static let title = "Other Wi-Fi Devices"
-  static let connectTitle = "Connect to Base Station..."
-  static let placeholderTitle = "No new Wi-Fi devices discovered"
-  static let networkInterfacesTitle = "Network Interfaces"
+  static let title = localized("Other Wi-Fi Devices")
+  static let connectTitle = localized("Connect to Base Station...")
+  static let placeholderTitle = localized("No new Wi-Fi devices discovered")
+  static let networkInterfacesTitle = localized("Network Interfaces")
   static let defaultNetworkInterface = "Ethernet 1"
   static let networkInterfaceTitles = ["Ethernet 1", "Wi-Fi"]
 
@@ -682,7 +682,7 @@ private final class AirPortWiFiDevicesPopUpButton: NSPopUpButton {
   }
 
   override func accessibilityTitle() -> String? {
-    "Other Wi-Fi Devices"
+    localized("Other Wi-Fi Devices")
   }
 
   override func accessibilityLabel() -> String? {

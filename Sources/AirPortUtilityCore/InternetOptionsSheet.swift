@@ -9,7 +9,7 @@ struct InternetOptionsSheet: View {
 
   var body: some View {
     ZStack(alignment: .topLeading) {
-      Text("Internet Options")
+      Text(localized("Internet Options"))
         .font(.system(size: 13, weight: .semibold))
         .frame(width: 150, alignment: .leading)
         .offset(x: 18, y: 11)
@@ -18,12 +18,12 @@ struct InternetOptionsSheet: View {
         .offset(x: 20, y: 36)
 
       if model.showsIPv6InternetControls {
-        optionLabel("Configure IPv6:", width: 159)
+        optionLabel(localized("Configure IPv6:"), width: 159)
           .offset(x: 61, y: 50)
-        Picker("Configure IPv6", selection: $draft.configureIPv6) {
-          Text("Link-local only").tag("link-local")
-          Text("Automatically").tag("automatic")
-          Text("Manually").tag("manual")
+        Picker(localized("Configure IPv6"), selection: $draft.configureIPv6) {
+          Text(localized("Link-local only")).tag("link-local")
+          Text(localized("Automatically")).tag("automatic")
+          Text(localized("Manually")).tag("manual")
         }
         .labelsHidden()
         .pickerStyle(.menu)
@@ -31,13 +31,13 @@ struct InternetOptionsSheet: View {
         .frame(width: 276, height: 23)
         .offset(x: 224, y: 45)
 
-        optionLabel("IPv6 Mode:", width: 159)
+        optionLabel(localized("IPv6 Mode:"), width: 159)
           .offset(x: 61, y: 78)
-        Picker("IPv6 Mode", selection: $draft.ipv6Mode) {
-          Text("Default").tag("")
-          Text("Host").tag("host")
-          Text("Tunnel").tag("tunnel")
-          Text("Router").tag("router")
+        Picker(localized("IPv6 Mode"), selection: $draft.ipv6Mode) {
+          Text(localized("Default")).tag("")
+          Text(localized("Host")).tag("host")
+          Text(localized("Tunnel")).tag("tunnel")
+          Text(localized("Router")).tag("router")
         }
         .labelsHidden()
         .pickerStyle(.menu)
@@ -45,7 +45,7 @@ struct InternetOptionsSheet: View {
         .frame(width: 276, height: 23)
         .offset(x: 224, y: 73)
 
-        optionLabel("Default Route:", width: 159)
+        optionLabel(localized("Default Route:"), width: 159)
           .offset(x: 61, y: 106)
         AirPortTextField(
           text: $draft.ipv6DefaultRoute,
@@ -54,7 +54,7 @@ struct InternetOptionsSheet: View {
           .offset(x: 224, y: 104)
 
         InternetOptionsCheckbox(
-          "Block incoming IPv6 connections",
+          localized("Block incoming IPv6 connections"),
           isOn: $draft.ipv6Firewall,
           identifier: "internet.options.ipv6.firewall")
           .frame(width: 279, height: 18, alignment: .leading)
@@ -63,14 +63,14 @@ struct InternetOptionsSheet: View {
 
       if model.showsDynamicGlobalHostnameControls {
         InternetOptionsCheckbox(
-          "Use dynamic global hostname",
+          localized("Use dynamic global hostname"),
           isOn: $draft.dynamicGlobalHostname,
           identifier: "internet.options.dynamic.global.hostname")
           .frame(width: 279, height: 18, alignment: .leading)
           .offset(x: 224, y: dynamicHostnameOffset)
 
         Group {
-          optionLabel("Hostname:", width: 133, enabled: draft.dynamicGlobalHostname)
+          optionLabel(localized("Hostname:"), width: 133, enabled: draft.dynamicGlobalHostname)
             .offset(x: 86, y: dynamicHostnameOffset + 31)
           AirPortTextField(
             text: $draft.globalHostname,
@@ -79,7 +79,7 @@ struct InternetOptionsSheet: View {
             .disabled(!draft.dynamicGlobalHostname)
             .internetOptionsDisabledField(!draft.dynamicGlobalHostname)
             .offset(x: 224, y: dynamicHostnameOffset + 29)
-          optionLabel("User:", width: 133, enabled: draft.dynamicGlobalHostname)
+          optionLabel(localized("User:"), width: 133, enabled: draft.dynamicGlobalHostname)
             .offset(x: 86, y: dynamicHostnameOffset + 58)
           AirPortTextField(
             text: $draft.globalHostnameUser,
@@ -88,7 +88,7 @@ struct InternetOptionsSheet: View {
             .disabled(!draft.dynamicGlobalHostname)
             .internetOptionsDisabledField(!draft.dynamicGlobalHostname)
             .offset(x: 224, y: dynamicHostnameOffset + 56)
-          optionLabel("Password:", width: 133, enabled: draft.dynamicGlobalHostname)
+          optionLabel(localized("Password:"), width: 133, enabled: draft.dynamicGlobalHostname)
             .offset(x: 86, y: dynamicHostnameOffset + 85)
           AirPortSecureField(
             text: $draft.globalHostnamePassword,
@@ -98,7 +98,7 @@ struct InternetOptionsSheet: View {
             .internetOptionsDisabledField(!draft.dynamicGlobalHostname)
             .offset(x: 224, y: dynamicHostnameOffset + 83)
           InternetOptionsCheckbox(
-            "Configure automatically",
+            localized("Configure automatically"),
             isOn: $draft.dynamicGlobalHostnameAutoConfig,
             identifier: "internet.options.dynamic.global.hostname.auto.config")
             .frame(width: 279, height: 18, alignment: .leading)
@@ -108,13 +108,22 @@ struct InternetOptionsSheet: View {
         }
       }
 
-      InternetOptionsButton("Cancel", identifier: "internet.options.cancel") { dismiss() }
-        .offset(x: 348, y: 283)
-      InternetOptionsButton("Save", isDefault: true, identifier: "internet.options.save") {
-        model.internet = draft
-        dismiss()
+      // Right-anchored rather than fixed x offsets: a wider translated label
+      // ("Abbrechen") would otherwise grow rightward into the Save button.
+      // The trailing edge and 12pt gap reproduce the English layout exactly.
+      HStack(spacing: 12) {
+        InternetOptionsButton(localized("Cancel"), identifier: "internet.options.cancel") {
+          dismiss()
+        }
+        InternetOptionsButton(
+          localized("Save"), isDefault: true, identifier: "internet.options.save"
+        ) {
+          model.internet = draft
+          dismiss()
+        }
       }
-      .offset(x: 430, y: 283)
+      .frame(width: 500, alignment: .trailing)
+      .offset(x: 0, y: 283)
     }
     .onAppear {
       if !loaded {
@@ -168,7 +177,13 @@ private struct InternetOptionsButton: NSViewRepresentable {
     button.setButtonType(.momentaryPushIn)
     button.alignment = .center
     button.translatesAutoresizingMaskIntoConstraints = false
-    button.widthAnchor.constraint(equalToConstant: 70).isActive = true
+    // Exact width, but never narrower than the label needs. The constants were
+    // measured against English and truncate longer translations; a plain
+    // greaterThanOrEqual constraint instead lets the button expand to fill,
+    // which changes the English layout.
+    button.widthAnchor.constraint(
+      equalToConstant: max(70, button.intrinsicContentSize.width)
+    ).isActive = true
     button.heightAnchor.constraint(equalToConstant: 22).isActive = true
     configure(button)
     return button
@@ -232,7 +247,13 @@ struct InternetOptionsCheckbox: NSViewRepresentable {
     button.isBordered = false
     button.allowsMixedState = false
     button.translatesAutoresizingMaskIntoConstraints = false
-    button.widthAnchor.constraint(equalToConstant: 279).isActive = true
+    // Exact width, but never narrower than the label needs. The constants were
+    // measured against English and truncate longer translations; a plain
+    // greaterThanOrEqual constraint instead lets the button expand to fill,
+    // which changes the English layout.
+    button.widthAnchor.constraint(
+      equalToConstant: max(279, button.intrinsicContentSize.width)
+    ).isActive = true
     button.heightAnchor.constraint(equalToConstant: 18).isActive = true
     button.setAccessibilityTitle(title)
     button.identifier = identifier.map { NSUserInterfaceItemIdentifier($0) }

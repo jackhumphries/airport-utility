@@ -39,12 +39,12 @@ extension AirportAppModel {
           cleanValue: cleanSnapshot.wireless.security,
           changesOnly: changesOnly && !wirelessModeChanged,
           allowed: Set(wirelessSecurityOptions.map(\.rawValue)),
-          statusMessage: "Wireless Security is not supported."
+          statusMessage: localized("Wireless Security is not supported.")
         )
       else { return nil }
       let shouldValidateWirelessName = !changesOnly || wirelessModeChanged || wirelessNameChanged
       guard !shouldValidateWirelessName || !normalized(wireless.networkName).isEmpty else {
-        status = "Wireless Network Name cannot be empty."
+        status = localized("Wireless Network Name cannot be empty.")
         return nil
       }
       appendChanged(
@@ -69,14 +69,14 @@ extension AirportAppModel {
             cleanValue: cleanSnapshot.wireless.wdsMode,
             changesOnly: changesOnly,
             allowed: ["main", "relay", "remote", "off"],
-            statusMessage: "WDS Mode must be main, relay, remote, or off."
+            statusMessage: localized("WDS Mode must be main, relay, remote, or off.")
           )
         else { return nil }
         appendChanged(
           &flags, "--wds-mode", wireless.wdsMode,
           cleanSnapshot.wireless.wdsMode, changesOnly: changesOnly)
         guard isValidWDSPeerAirPortIDs(wireless.wdsPeerAirPortIDs) else {
-          status = "WDS peer AirPort IDs must be one or two MAC addresses."
+          status = localized("WDS peer AirPort IDs must be one or two MAC addresses.")
           return nil
         }
         appendChanged(
@@ -96,15 +96,15 @@ extension AirportAppModel {
         || (wirelessNameChanged && !wirelessPassword.isEmpty)
       if shouldRewriteWirelessPassword {
         guard !normalized(wireless.networkName).isEmpty else {
-          status = "Wireless Network Name cannot be empty."
+          status = localized("Wireless Network Name cannot be empty.")
           return nil
         }
         guard !wirelessPassword.isEmpty else {
-          status = "Wireless Password cannot be empty."
+          status = localized("Wireless Password cannot be empty.")
           return nil
         }
         guard wirelessPassword == verifyWirelessPassword else {
-          status = "Wireless passwords do not match."
+          status = localized("Wireless passwords do not match.")
           return nil
         }
       }
@@ -127,7 +127,7 @@ extension AirportAppModel {
             "80211b", "80211bg", "80211g", "80211a", "80211n-a", "80211n-bg",
             "80211n-only-24", "80211n-only-5",
           ],
-          statusMessage: "Radio Mode is not supported.",
+          statusMessage: localized("Radio Mode is not supported."),
           allowEmpty: true
         )
       else { return nil }
@@ -135,7 +135,7 @@ extension AirportAppModel {
         && (!changesOnly || regionCode != normalized(cleanSnapshot.wireless.regionCode))
       {
         guard let code = Int(regionCode), (0...255).contains(code) else {
-          status = "Region code must be between 0 and 255."
+          status = localized("Region code must be between 0 and 255.")
           return nil
         }
       }
@@ -146,7 +146,7 @@ extension AirportAppModel {
           radioChannel == "automatic"
             || (Int(radioChannel).map { (1...200).contains($0) } ?? false)
         else {
-          status = "Radio channel must be 'automatic' or a channel number."
+          status = localized("Radio channel must be 'automatic' or a channel number.")
           return nil
         }
       }
@@ -175,16 +175,16 @@ extension AirportAppModel {
       let cleanOptions = cleanSnapshot.legacyDeviceOptions.wireless
       guard MulticastRateOption.allCases.contains(where: { $0.value == options.multicastRate })
       else {
-        status = "Multicast Rate is not supported."
+        status = localized("Multicast Rate is not supported.")
         return nil
       }
       guard TransmitPowerOption.allCases.contains(where: { $0.percent == options.transmitPower })
       else {
-        status = "Transmit Power is not supported."
+        status = localized("Transmit Power is not supported.")
         return nil
       }
       guard (60...86_400).contains(options.groupKeyTimeoutSeconds) else {
-        status = "WPA Group Key Timeout must be between 60 seconds and 24 hours."
+        status = localized("WPA Group Key Timeout must be between 60 seconds and 24 hours.")
         return nil
       }
       appendChanged(

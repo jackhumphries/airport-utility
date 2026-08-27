@@ -3,6 +3,12 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// Menu titles live in the app target, so they reach the shared table through
+/// AirPortUtilityCore's public entry point.
+private func localized(_ key: String, context: String? = nil) -> String {
+  AirPortLocalization.text(key, context: context)
+}
+
 @main
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -48,6 +54,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   // MARK: - Window
 
+  /// Places the window near the top-left of the active screen.
+  ///
+  /// Not centred: the window grows wider as base stations are discovered, and a
+  /// centred window expands in both directions, so on a busy network it ends up
+  /// partly off-screen. Anchored top-left it grows right and down into free
+  /// space. Uses visibleFrame, so it sits below the menu bar and clear of the
+  /// Dock, and falls back to centring if no screen is available.
+  private static func positionAtTopLeft(_ window: NSWindow) {
+    guard let screen = window.screen ?? NSScreen.main else {
+      window.center()
+      return
+    }
+    let margin: CGFloat = 20
+    let visible = screen.visibleFrame
+    window.setFrameOrigin(
+      NSPoint(
+        x: visible.minX + margin,
+        y: visible.maxY - window.frame.height - margin))
+  }
+
   private func showMainWindow() {
     if let window = windowController?.window {
       window.makeKeyAndOrderFront(nil)
@@ -68,13 +94,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       backing: .buffered,
       defer: false
     )
-    window.title = "AirPort Utility"
+    window.title = localized("AirPort Utility")
     window.minSize = window.frameRect(
       forContentRect: NSRect(origin: .zero, size: AirPortMainWindowMetrics.contentSize)
     ).size
     window.contentViewController = NSHostingController(rootView: content)
     window.isReleasedWhenClosed = false
-    window.center()
+    Self.positionAtTopLeft(window)
 
     let controller = NSWindowController(window: window)
     windowController = controller
@@ -174,113 +200,113 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private func installMainMenu() {
     let mainMenu = NSMenu()
     mainMenu.addItem(menu("AirPort Utility", submenu: applicationMenu()))
-    mainMenu.addItem(menu("File", submenu: fileMenu()))
-    mainMenu.addItem(menu("Edit", submenu: editMenu()))
+    mainMenu.addItem(menu(localized("File"), submenu: fileMenu()))
+    mainMenu.addItem(menu(localized("Edit", context: "menu"), submenu: editMenu()))
     mainMenu.addItem(menu("Base Station", submenu: baseStationMenu()))
-    mainMenu.addItem(menu("Window", submenu: windowMenu()))
-    mainMenu.addItem(menu("Help", submenu: helpMenu()))
+    mainMenu.addItem(menu(localized("Window"), submenu: windowMenu()))
+    mainMenu.addItem(menu(localized("Help"), submenu: helpMenu()))
     NSApplication.shared.mainMenu = mainMenu
-    NSApplication.shared.windowsMenu = mainMenu.item(withTitle: "Window")?.submenu
+    NSApplication.shared.windowsMenu = mainMenu.item(withTitle: localized("Window"))?.submenu
     NSApp.servicesMenu =
-      mainMenu.item(withTitle: "AirPort Utility")?.submenu?.item(withTitle: "Services")?.submenu
+      mainMenu.item(withTitle: "AirPort Utility")?.submenu?.item(withTitle: localized("Services"))?.submenu
   }
 
   private func applicationMenu() -> NSMenu {
     let menu = NSMenu(title: "AirPort Utility")
     menu.addItem(
       item(
-        "About AirPort Utility", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
+        localized("About AirPort Utility"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
         target: NSApp))
     menu.addItem(NSMenuItem.separator())
     menu.addItem(
-      item("Preferences...", action: #selector(showPreferences(_:)), key: ",", target: self))
+      item(localized("Preferences..."), action: #selector(showPreferences(_:)), key: ",", target: self))
     menu.addItem(NSMenuItem.separator())
-    menu.addItem(self.menu("Services", submenu: NSMenu(title: "Services")))
+    menu.addItem(self.menu(localized("Services"), submenu: NSMenu(title: localized("Services"))))
     menu.addItem(NSMenuItem.separator())
     menu.addItem(
       item(
-        "Hide AirPort Utility", action: #selector(NSApplication.hide(_:)), key: "h", target: NSApp))
+        localized("Hide AirPort Utility"), action: #selector(NSApplication.hide(_:)), key: "h", target: NSApp))
     menu.addItem(
       item(
-        "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), key: "h",
+        localized("Hide Others"), action: #selector(NSApplication.hideOtherApplications(_:)), key: "h",
         modifiers: [.command, .option], target: NSApp))
     menu.addItem(
-      item("Show All", action: #selector(NSApplication.unhideAllApplications(_:)), target: NSApp))
+      item(localized("Show All"), action: #selector(NSApplication.unhideAllApplications(_:)), target: NSApp))
     menu.addItem(NSMenuItem.separator())
     menu.addItem(
       item(
-        "Quit AirPort Utility", action: #selector(NSApplication.terminate(_:)), key: "q",
+        localized("Quit AirPort Utility"), action: #selector(NSApplication.terminate(_:)), key: "q",
         target: NSApp))
     return menu
   }
 
   private func fileMenu() -> NSMenu {
-    let menu = NSMenu(title: "File")
+    let menu = NSMenu(title: localized("File"))
     menu.addItem(
-      item("Configure Other...", action: #selector(configureOther(_:)), target: self))
+      item(localized("Configure Other..."), action: #selector(configureOther(_:)), target: self))
     menu.addItem(NSMenuItem.separator())
     menu.addItem(
       item(
-        "Import Configuration File...", action: #selector(importConfigurationFile(_:)),
+        localized("Import Configuration File..."), action: #selector(importConfigurationFile(_:)),
         target: self))
     menu.addItem(
       item(
-        "Export Configuration File...", action: #selector(exportConfigurationFile(_:)),
+        localized("Export Configuration File..."), action: #selector(exportConfigurationFile(_:)),
         target: self))
     menu.addItem(NSMenuItem.separator())
-    menu.addItem(item("Close", action: #selector(NSWindow.performClose(_:)), key: "w"))
+    menu.addItem(item(localized("Close"), action: #selector(NSWindow.performClose(_:)), key: "w"))
     return menu
   }
 
   private func editMenu() -> NSMenu {
-    let menu = NSMenu(title: "Edit")
-    menu.addItem(item("Undo", action: Selector(("undo:")), key: "z"))
+    let menu = NSMenu(title: localized("Edit"))
+    menu.addItem(item(localized("Undo"), action: Selector(("undo:")), key: "z"))
     menu.addItem(
-      item("Redo", action: Selector(("redo:")), key: "Z", modifiers: [.command, .shift]))
+      item(localized("Redo"), action: Selector(("redo:")), key: "Z", modifiers: [.command, .shift]))
     menu.addItem(NSMenuItem.separator())
-    menu.addItem(item("Cut", action: #selector(NSText.cut(_:)), key: "x"))
-    menu.addItem(item("Copy", action: #selector(NSText.copy(_:)), key: "c"))
-    menu.addItem(item("Paste", action: #selector(NSText.paste(_:)), key: "v"))
-    menu.addItem(item("Delete", action: #selector(NSText.delete(_:))))
+    menu.addItem(item(localized("Cut"), action: #selector(NSText.cut(_:)), key: "x"))
+    menu.addItem(item(localized("Copy"), action: #selector(NSText.copy(_:)), key: "c"))
+    menu.addItem(item(localized("Paste"), action: #selector(NSText.paste(_:)), key: "v"))
+    menu.addItem(item(localized("Delete"), action: #selector(NSText.delete(_:))))
     menu.addItem(NSMenuItem.separator())
-    menu.addItem(item("Select All", action: #selector(NSText.selectAll(_:)), key: "a"))
+    menu.addItem(item(localized("Select All"), action: #selector(NSText.selectAll(_:)), key: "a"))
     return menu
   }
 
   private func baseStationMenu() -> NSMenu {
     let menu = NSMenu(title: "Base Station")
     menu.addItem(
-      item("Refresh", action: #selector(refreshNetwork(_:)), key: "r", target: self))
+      item(localized("Refresh"), action: #selector(refreshNetwork(_:)), key: "r", target: self))
     menu.addItem(NSMenuItem.separator())
     menu.addItem(
-      item("Show Passwords…", action: #selector(showPasswords(_:)), target: self))
+      item(localized("Show Passwords…"), action: #selector(showPasswords(_:)), target: self))
     menu.addItem(NSMenuItem.separator())
     menu.addItem(
-      item("Restart…", action: #selector(restartBaseStation(_:)), target: self))
+      item(localized("Restart…"), action: #selector(restartBaseStation(_:)), target: self))
     menu.addItem(
       item(
-        "Restore Default Settings...", action: #selector(restoreDefaultSettings(_:)),
+        localized("Restore Default Settings..."), action: #selector(restoreDefaultSettings(_:)),
         target: self))
     menu.addItem(NSMenuItem.separator())
-    menu.addItem(disabledItem("Add WPS Printer…"))
+    menu.addItem(disabledItem(localized("Add WPS Printer…")))
     return menu
   }
 
   private func windowMenu() -> NSMenu {
-    let menu = NSMenu(title: "Window")
-    menu.addItem(item("Minimize", action: #selector(NSWindow.performMiniaturize(_:)), key: "m"))
-    menu.addItem(item("Zoom", action: #selector(NSWindow.performZoom(_:))))
+    let menu = NSMenu(title: localized("Window"))
+    menu.addItem(item(localized("Minimize"), action: #selector(NSWindow.performMiniaturize(_:)), key: "m"))
+    menu.addItem(item(localized("Zoom"), action: #selector(NSWindow.performZoom(_:))))
     menu.addItem(NSMenuItem.separator())
     menu.addItem(
-      item("Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), target: NSApp)
+      item(localized("Bring All to Front"), action: #selector(NSApplication.arrangeInFront(_:)), target: NSApp)
     )
     return menu
   }
 
   private func helpMenu() -> NSMenu {
-    let menu = NSMenu(title: "Help")
+    let menu = NSMenu(title: localized("Help"))
     menu.addItem(
-      item("AirPort Utility Help", action: #selector(showHelp(_:)), key: "?", target: self))
+      item(localized("AirPort Utility Help"), action: #selector(showHelp(_:)), key: "?", target: self))
     return menu
   }
 
@@ -328,7 +354,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   @objc func importConfigurationFile(_ sender: Any?) {
     showMainWindow()
     let panel = NSOpenPanel()
-    panel.title = "Import Configuration File"
+    panel.title = localized("Import Configuration File")
     panel.allowedContentTypes = Self.configurationContentTypes
     panel.allowsMultipleSelection = false
     panel.canChooseDirectories = false
@@ -338,7 +364,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
           try self?.model.importConfiguration(from: url)
         } catch {
-          self?.presentFileOperationError(error, title: "Import Configuration File")
+          self?.presentFileOperationError(error, title: localized("Import Configuration File"))
         }
       }
     }
@@ -347,7 +373,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   @objc func exportConfigurationFile(_ sender: Any?) {
     showMainWindow()
     let panel = NSSavePanel()
-    panel.title = "Export Configuration File"
+    panel.title = localized("Export Configuration File")
     panel.allowedContentTypes = Self.configurationContentTypes
     panel.nameFieldStringValue = model.defaultConfigurationFileName
     panel.begin { [weak self] response in
@@ -356,7 +382,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
           try self?.model.exportConfiguration(to: url)
         } catch {
-          self?.presentFileOperationError(error, title: "Export Configuration File")
+          self?.presentFileOperationError(error, title: localized("Export Configuration File"))
         }
       }
     }

@@ -33,6 +33,8 @@ final class PublicAPISurfaceTests: XCTestCase {
         "Sources/AirPortUtilityCore/ContentView.swift:public static let titleBarHeight: CGFloat = 28",
         "Sources/AirPortUtilityCore/ContentView.swift:public struct ContentView: View {",
         "Sources/AirPortUtilityCore/ContentView.swift:public var body: some View {",
+        "Sources/AirPortUtilityCore/Localization.swift:public enum AirPortLocalization {",
+        "Sources/AirPortUtilityCore/Localization.swift:public static func text(_ key: String, context: String? = nil) -> String {",
         "Sources/AirPortUtilityCore/SnapshotRenderer.swift:public enum AirPortSnapshotRenderer {",
         "Sources/AirPortUtilityCore/SnapshotRenderer.swift:public static func renderAll(model: AirportAppModel, outputDirectory: URL) throws -> [URL] {",
       ])

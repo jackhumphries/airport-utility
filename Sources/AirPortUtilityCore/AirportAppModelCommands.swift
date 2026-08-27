@@ -50,15 +50,15 @@ extension AirportAppModel {
 
   var postApplyDeviceNameForStatus: String {
     if usesLegacyACP {
-      return "AirPort Express"
+      return localized("AirPort Express")
     }
     switch baseStation.productID.trimmingCharacters(in: .whitespacesAndNewlines) {
     case "102", "107", "115":
-      return "AirPort Express"
+      return localized("AirPort Express")
     case "106", "109", "113", "116", "119":
-      return "Time Capsule"
+      return localized("Time Capsule")
     case "3", "104", "105", "108", "114", "117", "120":
-      return "AirPort Extreme"
+      return localized("AirPort Extreme")
     default:
       return "base station"
     }
@@ -452,7 +452,7 @@ extension AirportAppModel {
           ignoreStaleOperation("Ignored \(busyStatus) failure for stale host \(requestHost).")
         } else {
           let errorDescription = Self.userFacingErrorDescription(error.localizedDescription)
-          if busyStatus == "Refreshing settings" {
+          if busyStatus == localized("Refreshing settings") {
             hasTrustedConnectionPassword = false
           }
           preview = nil

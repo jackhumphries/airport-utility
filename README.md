@@ -1,6 +1,11 @@
 # AirPort Utility (beta)
 
-Apple's AirPort Utility is not guaranteed to run on macOS 27 and newer, so I reverse engineered the application and have reimplemented it for macOS 27 and newer with Swift (front-end code) and Python (backend protocol code). I leveraged Codex to accelerate this work.
+Apple's AirPort Utility is not guaranteed to run on macOS 27 and newer, so I reverse engineered the application and have reimplemented it for macOS 27 and newer with Swift (front-end code) and Python (backend protocol code).
+
+I leveraged Codex to accelerate this work, using the techniques I describe in
+this HotNets 2026 paper ([preprint
+pdf](https://cs.stanford.edu/~jhumphri/documents/you-bought-it-they-bricked-it.pdf)):
+"_You Bought It, They Bricked It: A Call for Reclaiming Local Control_".
 
 ![AirPort Utility network topology](docs/images/airport-utility-topology.png)
 
